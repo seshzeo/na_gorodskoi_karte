@@ -8,3 +8,6 @@ venv/
 .ruff_cache/
 .idea/
 .vscode/
+.env
+.env.*
+!.env.example
