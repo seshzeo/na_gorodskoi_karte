@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     api_v1_prefix: str = "/api/v1"
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/map_points"
+    moderator_api_key: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=BACKEND_DIR / ".env",
