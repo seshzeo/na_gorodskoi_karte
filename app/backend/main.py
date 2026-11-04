@@ -8,7 +8,7 @@ from app.backend.routers.points import router as points_router
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.2.0",
+    version="0.3.0",
     description="Backend сервиса интерактивной карты и пользовательских точек.",
 )
 
