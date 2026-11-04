@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,6 +16,25 @@ from app.backend.services.point_requests import (
 router = APIRouter(prefix="/point-requests", tags=["point requests"])
 
 
+def _validate_request_date_filters(
+    created_after: datetime | None, created_before: datetime | None
+):
+    for field_name, value in (
+        ("created_after", created_after),
+        ("created_before", created_before),
+    ):
+        if value is not None and value.utcoffset() is None:
+            raise HTTPException(
+                status_code=422,
+                detail=f"{field_name} must include a timezone",
+            )
+    if created_after and created_before and created_after > created_before:
+        raise HTTPException(
+            status_code=422,
+            detail="created_after must be earlier than or equal to created_before",
+        )
+
+
 @router.post("", response_model=PointRequestRead, status_code=status.HTTP_201_CREATED)
 async def create_point_request(
     payload: PointRequestCreate, db: AsyncSession = Depends(get_db)
@@ -27,12 +48,22 @@ async def create_point_request(
 @router.get("", response_model=list[PointRequestRead], dependencies=[Depends(require_moderator)])
 async def list_point_requests(
     status_value: str | None = Query(default=None, alias="status", pattern="^(pending|approved|rejected)$"),
+    category_id: int | None = Query(default=None, gt=0),
+    created_after: datetime | None = None,
+    created_before: datetime | None = None,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
+    _validate_request_date_filters(created_after, created_before)
     return await fetch_requests(
-        db, status_value=status_value, limit=limit, offset=offset
+        db,
+        status_value=status_value,
+        category_id=category_id,
+        created_after=created_after,
+        created_before=created_before,
+        limit=limit,
+        offset=offset,
     )
 
 
