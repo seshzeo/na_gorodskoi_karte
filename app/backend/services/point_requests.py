@@ -1,7 +1,5 @@
 from datetime import datetime, timezone
 
-from fastapi import HTTPException
-from geoalchemy2 import WKTElement
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.backend.models.point import Point
@@ -16,7 +14,7 @@ async def submit_request(db: AsyncSession, payload: dict):
     category = await get_active_category(db, payload["category_id"])
     if category is None:
         raise NotFoundError("Active category not found")
-    payload["author_external_id"] = payload.get("author_external_id") or "web:anonymous"
+    payload["author_external_id"] = "web:anonymous"
     request = PointRequest(**payload)
     db.add(request)
     await db.commit()

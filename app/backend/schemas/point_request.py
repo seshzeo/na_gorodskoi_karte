@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.backend.schemas.common import ORMModel
 
@@ -15,7 +15,6 @@ class PointRequestStatusValue(str, Enum):
 class PointRequestCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    author_external_id: str | None = Field(default=None, max_length=100)
     author_name: str = Field(min_length=1, max_length=120)
     title: str = Field(min_length=1, max_length=200)
     description: str = Field(min_length=1)
@@ -23,6 +22,13 @@ class PointRequestCreate(BaseModel):
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
     event_at: datetime
+
+    @field_validator("event_at")
+    @classmethod
+    def event_at_must_be_timezone_aware(cls, value):
+        if value.utcoffset() is None:
+            raise ValueError("event_at must include a timezone")
+        return value
 
 
 class PointRequestUpdate(BaseModel):
@@ -36,8 +42,17 @@ class PointRequestUpdate(BaseModel):
     longitude: float | None = Field(default=None, ge=-180, le=180)
     event_at: datetime | None = None
 
+    @field_validator("event_at")
+    @classmethod
+    def event_at_must_be_timezone_aware(cls, value):
+        if value is not None and value.utcoffset() is None:
+            raise ValueError("event_at must include a timezone")
+        return value
+
     @model_validator(mode="after")
     def validate_update(self):
+        if not self.model_fields_set:
+            raise ValueError("At least one field must be provided")
         for field in self.model_fields_set:
             if getattr(self, field) is None:
                 raise ValueError(f"{field} cannot be null")

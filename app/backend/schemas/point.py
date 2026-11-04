@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.backend.schemas.common import ORMModel
 
@@ -34,8 +34,17 @@ class PointUpdate(BaseModel):
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
 
+    @field_validator("event_at")
+    @classmethod
+    def event_at_must_be_timezone_aware(cls, value):
+        if value is not None and value.utcoffset() is None:
+            raise ValueError("event_at must include a timezone")
+        return value
+
     @model_validator(mode="after")
     def validate_update(self):
+        if not self.model_fields_set:
+            raise ValueError("At least one field must be provided")
         for field in self.model_fields_set:
             if getattr(self, field) is None:
                 raise ValueError(f"{field} cannot be null")
