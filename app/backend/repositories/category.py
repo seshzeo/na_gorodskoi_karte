@@ -19,7 +19,9 @@ async def get_category_by_name_or_slug(
     db: AsyncSession, *, name: str, slug: str
 ) -> Category | None:
     result = await db.execute(
-        select(Category).where((Category.name == name) | (Category.slug == slug))
+        select(Category)
+        .where((Category.name == name) | (Category.slug == slug))
+        .limit(1)
     )
     return result.scalar_one_or_none()
 
