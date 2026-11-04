@@ -1,7 +1,7 @@
 from sqlalchemy import Boolean, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base
+from app.backend.models.base import Base
 
 
 class Category(Base):

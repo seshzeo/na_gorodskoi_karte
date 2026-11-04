@@ -1,56 +1,50 @@
-# Map Points Backend — этап 1
+# Сервис «На городской карте» — Backend
 
-Фундамент backend: FastAPI, async SQLAlchemy, PostgreSQL/PostGIS, GeoAlchemy2 и Alembic.
-Реализованы базовая структура приложения, SQLAlchemy-модели и начальная миграция Alembic. REST API точек и заявок будет добавлен следующим этапом.
+Backend расположен в каталоге `app/backend`. Стек: FastAPI, SQLAlchemy 2 Async, PostgreSQL/PostGIS, GeoAlchemy2 и Alembic.
 
-## 1. Подготовка
-
-Требуется Python 3.11+ и PostgreSQL с возможностью установить расширение PostGIS.
-
-Создайте базу данных `map_points`, затем установите PostGIS:
-```sql
-CREATE EXTENSION IF NOT EXISTS postgis;
+## Структура
+```text
+app/
+  __init__.py
+  backend/
+    __init__.py
+    main.py
+    core/
+    models/
+    routers/
+    alembic/
+    alembic.ini
+    requirements.txt
+    .env.example
 ```
-(Миграция также выполняет `CREATE EXTENSION IF NOT EXISTS postgis`.)
 
-## 2. Установка
-
-Windows PowerShell:
+## Установка (Windows PowerShell, из корня репозитория)
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-Copy-Item .env.example .env
+pip install -r app/backend/requirements.txt
+Copy-Item app/backend/.env.example app/backend/.env
 ```
+Отредактируйте `app/backend/.env`, указав `DATABASE_URL`. Создайте БД `map_points`; миграция установит PostGIS extension (пользователю БД нужны соответствующие права).
 
-Проверьте `DATABASE_URL` в `.env`.
-
-## 3. Миграция
-
+## Миграции
 ```powershell
-alembic upgrade head
+alembic -c app/backend/alembic.ini upgrade head
 ```
 
-## 4. Запуск
-
+## Запуск
 ```powershell
-uvicorn app.main:app --reload
+uvicorn app.backend.main:app --reload
 ```
+Swagger: http://127.0.0.1:8000/docs  
+Health: http://127.0.0.1:8000/api/v1/health
 
-Документация: http://127.0.0.1:8000/docs  
-Проверка API и БД: http://127.0.0.1:8000/api/v1/health
+## Статус
+Реализованы каркас FastAPI, SQLAlchemy-модели, начальная миграция и health endpoint. CRUD точек и заявок, модерация и авторизация будут добавлены следующими этапами. Мутации пока не реализованы.
 
-## Важные решения
-
-- `points.location` — `Geography(Point, 4326)`. При создании геоточки порядок координат в WKT: `POINT(longitude latitude)`.
+## Решения модели
+- `points.location` — `Geography(Point, 4326)`; порядок координат: долгота, широта.
 - `event_at` хранится с timezone.
-- `point_requests.point_id` уникален: одна заявка может породить не более одной точки.
-- `is_active` позволяет скрывать/удалять точки логически, не разрушая историю.
-- `author_external_id` — идентификатор автора заявки, но не механизм аутентификации.
-- Таблица `categories` включена, поскольку обе основные сущности ссылаются на категории.
-
-## Текущий статус
-
-Сейчас доступны только корневой endpoint и проверка подключения к БД (`GET /api/v1/health`). CRUD точек и заявок, модерация заявок, авторизация модератора и тесты пока не реализованы. Мутации данных не открыты без авторизации.
-
-Следующий этап — Pydantic-схемы, сервисы и REST API для точек и заявок.
+- `point_requests.point_id` уникален.
+- `is_active` позволяет скрывать точки без физического удаления.
+- `author_external_id` не является механизмом аутентификации.
