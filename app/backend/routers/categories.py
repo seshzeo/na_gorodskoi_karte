@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.backend.core.database import get_db
 from app.backend.core.security import require_moderator
 from app.backend.schemas.category import (
-    CategoryAdminPage, CategoryCreate, CategoryRead, CategoryUpdate,
+    CategoryAdminPage, CategoryAdminRead, CategoryCreate, CategoryRead, CategoryUpdate,
 )
 from app.backend.schemas.common import ErrorResponse
 from app.backend.services.catalog import (
@@ -48,7 +48,7 @@ async def list_moderator_categories(
 
 @router.post(
     "",
-    response_model=CategoryRead,
+    response_model=CategoryAdminRead,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_moderator)],
 )
@@ -61,7 +61,7 @@ async def post_category(payload: CategoryCreate, db: AsyncSession = Depends(get_
 
 @router.patch(
     "/{category_id}",
-    response_model=CategoryRead,
+    response_model=CategoryAdminRead,
     dependencies=[Depends(require_moderator)],
 )
 async def patch_category(
