@@ -39,6 +39,11 @@ def upgrade() -> None:
         ["created_at"],
     )
     op.create_index(
+        "ix_moderator_audit_logs_action",
+        "moderator_audit_logs",
+        ["action"],
+    )
+    op.create_index(
         "ix_moderator_audit_logs_object",
         "moderator_audit_logs",
         ["object_type", "object_id"],
@@ -53,5 +58,6 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index("ix_moderator_audit_logs_moderator", table_name="moderator_audit_logs")
     op.drop_index("ix_moderator_audit_logs_object", table_name="moderator_audit_logs")
+    op.drop_index("ix_moderator_audit_logs_action", table_name="moderator_audit_logs")
     op.drop_index("ix_moderator_audit_logs_created_at", table_name="moderator_audit_logs")
     op.drop_table("moderator_audit_logs")
