@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.backend.core.database import get_db
 from app.backend.core.security import require_moderator
-from app.backend.schemas.point_request import (
+from app.backend.schemas.common import ErrorResponse\nfrom app.backend.schemas.point_request import (
     PointRequestCreate, PointRequestRead, PointRequestReject, PointRequestUpdate,
 )
 from app.backend.services.errors import ConflictError, NotFoundError
@@ -13,7 +13,7 @@ from app.backend.services.point_requests import (
     approve_request, fetch_request, fetch_requests, reject_request, submit_request, update_request,
 )
 
-router = APIRouter(prefix="/point-requests", tags=["point requests"])
+router = APIRouter(\n    prefix="/point-requests",\n    tags=["point requests"],\n    responses={\n        401: {"model": ErrorResponse},\n        403: {"model": ErrorResponse},\n        404: {"model": ErrorResponse},\n        409: {"model": ErrorResponse},\n        422: {"model": ErrorResponse},\n        503: {"model": ErrorResponse},\n    },\n)
 
 
 def _validate_request_date_filters(
