@@ -1,0 +1,2 @@
+import {useQuery} from "@tanstack/react-query";import {api} from "../../../shared/api";import type {Point} from "../../../entities";
+export function usePoints(bbox:string|undefined,categoryId?:number){return useQuery({queryKey:["points",bbox,categoryId],queryFn:()=>{const q=new URLSearchParams({bbox:bbox!,limit:"500"});if(categoryId)q.set("category_id",String(categoryId));return api<Point[]>("/points?"+q)},enabled:!!bbox,staleTime:30000,gcTime:300000});}
