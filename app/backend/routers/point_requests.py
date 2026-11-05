@@ -1,19 +1,39 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.backend.core.database import get_db
 from app.backend.core.security import require_moderator
-from app.backend.schemas.common import ErrorResponse\nfrom app.backend.schemas.point_request import (
-    PointRequestCreate, PointRequestRead, PointRequestReject, PointRequestUpdate,
+from app.backend.schemas.common import ErrorResponse
+from app.backend.schemas.point_request import (
+    PointRequestCreate,
+    PointRequestRead,
+    PointRequestReject,
+    PointRequestUpdate,
 )
 from app.backend.services.errors import ConflictError, NotFoundError
 from app.backend.services.point_requests import (
-    approve_request, fetch_request, fetch_requests, reject_request, submit_request, update_request,
+    approve_request,
+    fetch_request,
+    fetch_requests,
+    reject_request,
+    submit_request,
+    update_request,
 )
 
-router = APIRouter(\n    prefix="/point-requests",\n    tags=["point requests"],\n    responses={\n        401: {"model": ErrorResponse},\n        403: {"model": ErrorResponse},\n        404: {"model": ErrorResponse},\n        409: {"model": ErrorResponse},\n        422: {"model": ErrorResponse},\n        503: {"model": ErrorResponse},\n    },\n)
+router = APIRouter(
+    prefix="/point-requests",
+    tags=["point requests"],
+    responses={
+        401: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        404: {"model": ErrorResponse},
+        409: {"model": ErrorResponse},
+        422: {"model": ErrorResponse},
+        503: {"model": ErrorResponse},
+    },
+)
 
 
 def _validate_request_date_filters(
@@ -45,9 +65,15 @@ async def create_point_request(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("", response_model=list[PointRequestRead], dependencies=[Depends(require_moderator)])
+@router.get(
+    "",
+    response_model=list[PointRequestRead],
+    dependencies=[Depends(require_moderator)],
+)
 async def list_point_requests(
-    status_value: str | None = Query(default=None, alias="status", pattern="^(pending|approved|rejected)$"),
+    status_value: str | None = Query(
+        default=None, alias="status", pattern="^(pending|approved|rejected)$"
+    ),
     category_id: int | None = Query(default=None, gt=0),
     created_after: datetime | None = None,
     created_before: datetime | None = None,
@@ -68,7 +94,8 @@ async def list_point_requests(
 
 
 @router.get(
-    "/{request_id}", response_model=PointRequestRead,
+    "/{request_id}",
+    response_model=PointRequestRead,
     dependencies=[Depends(require_moderator)],
 )
 async def get_point_request(request_id: int, db: AsyncSession = Depends(get_db)):
@@ -79,14 +106,17 @@ async def get_point_request(request_id: int, db: AsyncSession = Depends(get_db))
 
 
 @router.patch(
-    "/{request_id}", response_model=PointRequestRead,
+    "/{request_id}",
+    response_model=PointRequestRead,
     dependencies=[Depends(require_moderator)],
 )
 async def patch_point_request(
     request_id: int, payload: PointRequestUpdate, db: AsyncSession = Depends(get_db)
 ):
     try:
-        return await update_request(db, request_id, payload.model_dump(exclude_unset=True))
+        return await update_request(
+            db, request_id, payload.model_dump(exclude_unset=True)
+        )
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ConflictError as exc:
@@ -94,7 +124,8 @@ async def patch_point_request(
 
 
 @router.post(
-    "/{request_id}/approve", response_model=PointRequestRead,
+    "/{request_id}/approve",
+    response_model=PointRequestRead,
     dependencies=[Depends(require_moderator)],
 )
 async def approve_point_request(
@@ -111,7 +142,8 @@ async def approve_point_request(
 
 
 @router.post(
-    "/{request_id}/reject", response_model=PointRequestRead,
+    "/{request_id}/reject",
+    response_model=PointRequestRead,
     dependencies=[Depends(require_moderator)],
 )
 async def reject_point_request(
