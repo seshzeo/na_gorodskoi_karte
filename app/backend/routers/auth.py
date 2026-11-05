@@ -14,7 +14,11 @@ from app.backend.services.auth import (
     logout,
 )
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(
+    prefix="/auth",
+    tags=["auth"],
+    responses={401: {"description": "Authentication required"}, 403: {"description": "CSRF validation failed"}},
+)
 
 
 @router.get("/csrf", response_model=CsrfResponse)
