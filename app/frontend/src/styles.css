@@ -151,3 +151,17 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 }
 
 [data-theme="dark"] .base-map-layer canvas{filter:invert(88%) hue-rotate(180deg) brightness(.82) contrast(.9)}
+
+
+/* Moderator authentication */
+.auth-panel{width:min(440px,100%);margin:24px auto;padding:25px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow-sm)}
+.auth-panel h2{font-size:19px;letter-spacing:-.4px;margin:7px 0}
+.auth-panel>p,.auth-panel-heading p{font-size:12px;line-height:1.55;color:var(--text-muted);margin:7px 0 0}
+.auth-form{display:grid;gap:15px;margin-top:22px}
+.auth-submit{width:100%;margin-top:3px}
+.moderator-account{display:grid;gap:6px;border-top:1px solid var(--border);margin-top:13px;padding:15px 8px 4px}
+.moderator-account>span{font-size:10px;color:var(--text-muted)}
+.moderator-account>strong{font-size:13px;margin-bottom:5px}
+.moderator-account .button{width:100%}
+.moderator-account .form-error{font-size:10px;line-height:1.45;margin:4px 0 0}
+@media(max-width:720px){.auth-panel{margin:5px auto;padding:20px}}
