@@ -1,0 +1,1 @@
+export function ModeratorPage(){return <main className="moderator"><h1>Модерация</h1><p>Каркас готов. Очередь заявок и авторизация модератора подключаются следующим feature-этапом.</p></main>}
