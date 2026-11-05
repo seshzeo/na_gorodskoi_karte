@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { PointRequestRead } from "../../../entities";
+import type { Page, PointRequestRead } from "../../../entities";
 import { api } from "../../../shared/api";
 
 export type RequestFilter = "pending" | "approved" | "rejected" | "all";
@@ -14,7 +14,7 @@ export function usePointRequests(status: RequestFilter) {
     queryFn: () => {
       const params = new URLSearchParams({ limit: "50", offset: "0" });
       if (status !== "all") params.set("status", status);
-      return api<PointRequestRead[]>(`/point-requests?${params.toString()}`);
+      return api<Page<PointRequestRead>>(`/point-requests?${params.toString()}`);
     },
     staleTime: 15_000,
     gcTime: 300_000,

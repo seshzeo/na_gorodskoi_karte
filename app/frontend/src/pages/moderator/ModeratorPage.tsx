@@ -47,7 +47,7 @@ export function ModeratorPage() {
   const requestsQuery = usePointRequests(filter);
   const categoriesQuery = useCategories();
   const moderation = useModeratePointRequest();
-  const requests = requestsQuery.data ?? [];
+  const requests = requestsQuery.data?.items ?? [];
   const selected = requests.find((item) => item.id === selectedId) ?? requests[0] ?? null;
   const categoryName = (id: number) => categoriesQuery.data?.find((item) => item.id === id)?.name ?? `Категория #${id}`;
 
@@ -170,7 +170,7 @@ export function ModeratorPage() {
           <div className="moderator-content">
             <div className="moderator-panel-heading">
               <div><h2>Очередь заявок</h2><p>Новые предложения от посетителей городской карты.</p></div>
-              <span className="status-pill pending">{requestsQuery.isLoading ? "Загрузка…" : `Заявок: ${requestsQuery.data?.length ?? 0}`}</span>
+              <span className="status-pill pending">{requestsQuery.isLoading ? "Загрузка…" : `Заявок: ${requestsQuery.data?.total ?? 0}`}</span>
             </div>
 
             <div className="request-filters" role="tablist" aria-label="Фильтр заявок">
