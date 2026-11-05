@@ -1,0 +1,3 @@
+export type Category={id:number;name:string;slug:string};
+export type Point={id:number;title:string;description:string;category_id:number;category_name:string;latitude:number;longitude:number;event_at:string;author_name:string;created_at:string;updated_at:string};
+export type PointRequest={author_name:string;title:string;description:string;category_id:number;latitude:number;longitude:number;event_at:string};
