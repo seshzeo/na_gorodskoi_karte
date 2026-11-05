@@ -31,7 +31,7 @@ async def fetch_point(db: AsyncSession, point_id: int, *, include_archived: bool
 async def update_point(
     db: AsyncSession, point_id: int, changes: dict, *, include_archived: bool = False
 ):
-    point_row = await get_point(db, point_id, active_only=not include_archived)
+    point_row = await get_point(db, point_id, active_only=not include_archived, lock=True)
     if point_row is None:
         raise NotFoundError("Point not found")
     point = point_row[0]
@@ -48,7 +48,7 @@ async def update_point(
 
 
 async def hide_point(db: AsyncSession, point_id: int):
-    point_row = await get_point(db, point_id, active_only=False)
+    point_row = await get_point(db, point_id, active_only=False, lock=True)
     if point_row is None:
         raise NotFoundError("Point not found")
     if not point_row[0].is_active:
