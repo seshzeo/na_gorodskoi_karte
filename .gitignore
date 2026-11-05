@@ -11,3 +11,7 @@ venv/
 .env
 .env.*
 !.env.example
+# Frontend
+node_modules/
+dist/
+*.tsbuildinfo
