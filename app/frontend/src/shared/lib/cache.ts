@@ -1,0 +1,1 @@
+export const cachePolicy={categories:{staleTime:5*60_000,gcTime:30*60_000},points:{staleTime:30_000,gcTime:5*60_000},staticAssets:"immutable",publicApi:"s-maxage=60"};
