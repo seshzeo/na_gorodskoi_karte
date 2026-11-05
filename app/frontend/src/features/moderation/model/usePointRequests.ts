@@ -25,13 +25,13 @@ export function useModeratePointRequest() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, action, reason }: ModerationAction) => {
-      if (action === "approve") {
-        return api<PointRequestRead>(`/point-requests/${id}/approve`, { method: "POST" });
+    mutationFn: (input: ModerationAction) => {
+      if (input.action === "approve") {
+        return api<PointRequestRead>(`/point-requests/${input.id}/approve`, { method: "POST" });
       }
-      return api<PointRequestRead>(`/point-requests/${id}/reject`, {
+      return api<PointRequestRead>(`/point-requests/${input.id}/reject`, {
         method: "POST",
-        body: JSON.stringify({ reason }),
+        body: JSON.stringify({ reason: input.reason }),
       });
     },
     onSuccess: async () => {
