@@ -64,6 +64,8 @@ async def restore_point(db: AsyncSession, point_id: int):
     point = point_row[0]
     if point.is_active:
         raise ConflictError("Point is already active")
+    if await get_active_category(db, point.category_id) is None:
+        raise ConflictError("Point category is inactive; activate the category before restoring")
     point.is_active = True
     await db.commit()
     return await fetch_point(db, point_id)
