@@ -1,0 +1,2 @@
+import {useCategories} from "../../../entities/category/model/useCategories";
+export function CategoryFilter({value,onChange}:{value?:number;onChange:(v?:number)=>void}){const q=useCategories();return <select value={value??""} disabled={q.isLoading} onChange={e=>onChange(e.target.value?Number(e.target.value):undefined)}><option value="">Все категории</option>{(q.data??[]).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>}
