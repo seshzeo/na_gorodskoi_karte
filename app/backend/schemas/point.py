@@ -52,6 +52,16 @@ class PointUpdate(BaseModel):
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
 
+    @field_validator("title", "description", "author_name", mode="before")
+    @classmethod
+    def normalize_text(cls, value):
+        if value is None or not isinstance(value, str):
+            return value
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("Value cannot be blank")
+        return normalized
+
     @field_validator("event_at")
     @classmethod
     def event_at_must_be_timezone_aware(cls, value):
