@@ -19,6 +19,24 @@ class PointRead(ORMModel):
     updated_at: datetime
 
 
+class PointPage(BaseModel):
+    items: list[PointRead]
+    total: int
+    limit: int
+    offset: int
+
+
+class ModeratorPointRead(PointRead):
+    is_active: bool
+
+
+class ModeratorPointPage(BaseModel):
+    items: list[ModeratorPointRead]
+    total: int
+    limit: int
+    offset: int
+
+
 class PointNearbyRead(PointRead):
     distance_m: float
 
