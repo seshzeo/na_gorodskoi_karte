@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.backend.models.point import Point
@@ -69,7 +70,11 @@ async def approve_request(db: AsyncSession, request_id: int, moderator_id: str):
     request.point_id = point.id
     request.moderated_by = moderator_id
     request.moderated_at = datetime.now(timezone.utc)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise ConflictError("Could not reject point request") from exc
     await db.refresh(request)
     return request
 
