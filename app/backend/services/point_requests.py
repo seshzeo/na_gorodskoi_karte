@@ -55,6 +55,7 @@ async def approve_request(db: AsyncSession, request_id: int, moderator_id: str):
         raise NotFoundError("Point request not found")
     if request.status != PointRequestStatus.PENDING:
         raise ConflictError("Only pending requests can be approved")
+
     point = Point(
         title=request.title,
         description=request.description,
@@ -65,16 +66,18 @@ async def approve_request(db: AsyncSession, request_id: int, moderator_id: str):
         is_active=True,
     )
     db.add(point)
-    await db.flush()
-    request.status = PointRequestStatus.APPROVED
-    request.point_id = point.id
-    request.moderated_by = moderator_id
-    request.moderated_at = datetime.now(timezone.utc)
     try:
+        # Keep INSERT, request state transition and audit fields in one transaction.
+        await db.flush()
+        request.status = PointRequestStatus.APPROVED
+        request.point_id = point.id
+        request.moderated_by = moderator_id
+        request.moderated_at = datetime.now(timezone.utc)
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
         raise ConflictError("Could not approve point request") from exc
+
     await db.refresh(request)
     return request
 
