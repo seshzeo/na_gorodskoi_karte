@@ -31,7 +31,8 @@ async def fetch_request(db: AsyncSession, request_id: int):
 
 
 async def fetch_requests(db: AsyncSession, **filters):
-    return await list_requests(db, **filters)
+    rows, total = await list_requests(db, **filters)
+    return {"rows": rows, "total": total}
 
 
 async def update_request(db: AsyncSession, request_id: int, changes: dict):
