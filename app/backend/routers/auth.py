@@ -6,6 +6,7 @@ from app.backend.core.database import get_db
 from app.backend.core.security import require_moderator
 from app.backend.models.moderator import Moderator
 from app.backend.schemas.auth import CsrfResponse, LoginRequest, LoginResponse, ModeratorRead
+from app.backend.schemas.common import ErrorResponse
 from app.backend.services.auth import (
     clear_session_cookie,
     get_session_from_request,
@@ -17,7 +18,11 @@ from app.backend.services.auth import (
 router = APIRouter(
     prefix="/auth",
     tags=["auth"],
-    responses={401: {"description": "Authentication required"}, 403: {"description": "CSRF validation failed"}},
+    responses={
+        401: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        422: {"model": ErrorResponse},
+    },
 )
 
 
