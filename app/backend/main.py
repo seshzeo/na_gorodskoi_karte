@@ -7,6 +7,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.backend.core.config import settings
 from app.backend.routers.auth import router as auth_router
+from app.backend.routers.audit import router as audit_router
 from app.backend.routers.categories import (
     moderator_categories_router,
     router as categories_router,
@@ -44,6 +45,7 @@ app = FastAPI(
         {"name": "points", "description": "Публичные точки карты и операции модератора."},
         {"name": "moderator points", "description": "Административный каталог активных и архивных точек."},
         {"name": "point requests", "description": "Пользовательские заявки и их модерация."},
+        {"name": "moderator audit", "description": "История действий модератора."},
         {"name": "root", "description": "Служебная информация API."},
     ],
 )
@@ -92,6 +94,7 @@ for router in (
     points_router,
     moderator_points_router,
     point_requests_router,
+    audit_router,
 ):
     app.include_router(router, prefix=settings.api_v1_prefix)
 
