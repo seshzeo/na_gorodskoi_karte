@@ -36,6 +36,7 @@ async def update_point(
     if point_row is None:
         raise NotFoundError("Point not found")
     point = point_row[0]
+    changed_fields = sorted(changes)
     if "category_id" in changes:
         category = await get_active_category(db, changes["category_id"])
         if category is None:
@@ -47,7 +48,7 @@ async def update_point(
     await record_moderator_action(
         db, moderator_id=moderator_id, action="point.updated",
         object_type="point", object_id=point_id,
-        details={"changed_fields": sorted(changes)},
+        details={"changed_fields": changed_fields},
     )
     await db.commit()
     # Another moderator may archive the point immediately after this transaction.
