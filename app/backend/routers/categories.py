@@ -52,9 +52,12 @@ async def list_moderator_categories(
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_moderator)],
 )
-async def post_category(payload: CategoryCreate, db: AsyncSession = Depends(get_db)):
+async def post_category(
+    payload: CategoryCreate, db: AsyncSession = Depends(get_db),
+    moderator_id: str = Depends(require_moderator),
+):
     try:
-        return await create_category(db, payload.model_dump())
+        return await create_category(db, payload.model_dump(), moderator_id)
     except ConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
@@ -68,10 +71,11 @@ async def patch_category(
     category_id: int,
     payload: CategoryUpdate,
     db: AsyncSession = Depends(get_db),
+    moderator_id: str = Depends(require_moderator),
 ):
     try:
         return await update_category(
-            db, category_id, payload.model_dump(exclude_unset=True)
+            db, category_id, payload.model_dump(exclude_unset=True), moderator_id
         )
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -84,9 +88,12 @@ async def patch_category(
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_moderator)],
 )
-async def remove_category(category_id: int, db: AsyncSession = Depends(get_db)):
+async def remove_category(
+    category_id: int, db: AsyncSession = Depends(get_db),
+    moderator_id: str = Depends(require_moderator),
+):
     try:
-        await delete_category(db, category_id)
+        await delete_category(db, category_id, moderator_id)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ConflictError as exc:
