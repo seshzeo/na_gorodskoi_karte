@@ -1,10 +1,7 @@
 import asyncio
 import getpass
 
-from sqlalchemy import select
-
 from app.backend.core.database import AsyncSessionLocal
-from app.backend.models.moderator import Moderator
 from app.backend.services.auth import create_moderator
 
 
