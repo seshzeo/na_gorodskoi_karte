@@ -1,0 +1,17 @@
+import {useEffect,useRef,useState} from "react";
+import Map from "ol/Map";import View from "ol/View";import TileLayer from "ol/layer/Tile";import OSM from "ol/source/OSM";
+import VectorLayer from "ol/layer/Vector";import VectorSource from "ol/source/Vector";import Feature from "ol/Feature";
+import PointGeom from "ol/geom/Point";import Style from "ol/style/Style";import CircleStyle from "ol/style/Circle";import Fill from "ol/style/Fill";
+import {fromLonLat,toLonLat} from "ol/proj";import {useQuery} from "@tanstack/react-query";import {api} from "../shared/api";import type {Point} from "../entities";import "ol/ol.css";
+export function MapWidget({categoryId,onSelect}:{categoryId?:number;onSelect:(p:Point)=>void}){
+ const el=useRef<HTMLDivElement>(null);const map=useRef<Map|null>(null);const [bbox,setBbox]=useState<string>();
+ useEffect(()=>{if(!el.current)return;const m=new Map({target:el.current,layers:[new TileLayer({source:new OSM()})],view:new View({center:fromLonLat([46.034,51.533]),zoom:12})});
+ const update=()=>{const s=m.getSize();if(!s)return;const e=m.getView().calculateExtent(s);const a=toLonLat([e[0],e[1]]),b=toLonLat([e[2],e[3]]);setBbox([a[0],a[1],b[0],b[1]].join(","))};
+ m.on("moveend",update);update();map.current=m;return()=>{m.setTarget(undefined);map.current=null}},[]);
+ const q=useQuery({queryKey:["points",bbox,categoryId],queryFn:()=>{const p=new URLSearchParams({bbox:bbox!,limit:"500"});if(categoryId)p.set("category_id",String(categoryId));return api<Point[]>("/points?"+p)},enabled:!!bbox,staleTime:30000});
+ useEffect(()=>{if(!map.current)return;const source=new VectorSource();const layer=new VectorLayer({source,style:new Style({image:new CircleStyle({radius:7,fill:new Fill({color:"#2563eb"})})})});
+ (q.data??[]).forEach(p=>source.addFeature(new Feature({geometry:new PointGeom(fromLonLat([p.longitude,p.latitude])),pointId:p.id})));
+ const click=(e:any)=>map.current?.forEachFeatureAtPixel(e.pixel,f=>{const p=(q.data??[]).find(x=>x.id===f.get("pointId"));if(p)onSelect(p);return true});
+ map.current.addLayer(layer);map.current.on("singleclick",click);return()=>{map.current?.un("singleclick",click);map.current?.removeLayer(layer)}},[q.data,onSelect]);
+ return <div className="map"><div ref={el} className="map-canvas"/>{q.isFetching&&<div className="status">Загрузка…</div>}{q.isError&&<div className="status error">Ошибка загрузки точек</div>}</div>;
+}
