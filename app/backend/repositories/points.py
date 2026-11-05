@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from geoalchemy2 import Geography, Geometry, WKTElement
 from sqlalchemy import cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +14,29 @@ def _point_query():
     return select(Point, longitude, latitude).options(selectinload(Point.category))
 
 
+def _apply_point_filters(
+    query,
+    *,
+    bbox: tuple[float, float, float, float] | None,
+    category_ids: list[int] | None,
+    event_after: datetime | None,
+    event_before: datetime | None,
+):
+    if bbox:
+        min_lon, min_lat, max_lon, max_lat = bbox
+        envelope = func.ST_MakeEnvelope(min_lon, min_lat, max_lon, max_lat, 4326)
+        query = query.where(
+            func.ST_Intersects(cast(Point.location, Geometry(srid=4326)), envelope)
+        )
+    if category_ids:
+        query = query.where(Point.category_id.in_(category_ids))
+    if event_after is not None:
+        query = query.where(Point.event_at >= event_after)
+    if event_before is not None:
+        query = query.where(Point.event_at < event_before)
+    return query
+
+
 async def get_point(db: AsyncSession, point_id: int, *, active_only: bool = True):
     query = _point_query().where(Point.id == point_id)
     if active_only:
@@ -21,21 +46,61 @@ async def get_point(db: AsyncSession, point_id: int, *, active_only: bool = True
 
 
 async def list_points(
-    db: AsyncSession, *, bbox: tuple[float, float, float, float] | None,
-    category_id: int | None, limit: int, offset: int,
+    db: AsyncSession,
+    *,
+    bbox: tuple[float, float, float, float] | None,
+    category_ids: list[int] | None,
+    event_after: datetime | None,
+    event_before: datetime | None,
+    limit: int,
+    offset: int,
 ):
-    query = _point_query().where(Point.is_active.is_(True))
-    if bbox:
-        min_lon, min_lat, max_lon, max_lat = bbox
-        envelope = func.ST_MakeEnvelope(min_lon, min_lat, max_lon, max_lat, 4326)
-        query = query.where(
-            func.ST_Intersects(cast(Point.location, Geometry(srid=4326)), envelope)
-        )
-    if category_id is not None:
-        query = query.where(Point.category_id == category_id)
+    filters = dict(
+        bbox=bbox,
+        category_ids=category_ids,
+        event_after=event_after,
+        event_before=event_before,
+    )
+    count_query = _apply_point_filters(
+        select(Point.id).where(Point.is_active.is_(True)), **filters
+    )
+    total = await db.scalar(select(func.count()).select_from(count_query.subquery()))
+
+    query = _apply_point_filters(
+        _point_query().where(Point.is_active.is_(True)), **filters
+    )
     query = query.order_by(Point.event_at.asc(), Point.id.asc()).limit(limit).offset(offset)
     result = await db.execute(query)
-    return result.all()
+    return result.all(), int(total or 0)
+
+
+async def list_moderator_points(
+    db: AsyncSession,
+    *,
+    status_value: str,
+    category_id: int | None,
+    event_after: datetime | None,
+    event_before: datetime | None,
+    limit: int,
+    offset: int,
+):
+    filters = []
+    if status_value == "active":
+        filters.append(Point.is_active.is_(True))
+    elif status_value == "archived":
+        filters.append(Point.is_active.is_(False))
+    if category_id is not None:
+        filters.append(Point.category_id == category_id)
+    if event_after is not None:
+        filters.append(Point.event_at >= event_after)
+    if event_before is not None:
+        filters.append(Point.event_at < event_before)
+
+    count_query = select(Point.id).where(*filters)
+    total = await db.scalar(select(func.count()).select_from(count_query.subquery()))
+    query = _point_query().where(*filters).order_by(Point.event_at.asc(), Point.id.asc())
+    result = await db.execute(query.limit(limit).offset(offset))
+    return result.all(), int(total or 0)
 
 
 async def nearby_points(
