@@ -7,10 +7,16 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.backend.core.config import settings
 from app.backend.routers.auth import router as auth_router
-from app.backend.routers.categories import router as categories_router
+from app.backend.routers.categories import (
+    moderator_categories_router,
+    router as categories_router,
+)
 from app.backend.routers.health import router as health_router
 from app.backend.routers.point_requests import router as point_requests_router
-from app.backend.routers.points import router as points_router
+from app.backend.routers.points import (
+    moderator_points_router,
+    router as points_router,
+)
 
 
 def _error_code(status_code: int) -> str:
@@ -36,6 +42,7 @@ app = FastAPI(
         {"name": "auth", "description": "Сессионная авторизация модератора."},
         {"name": "categories", "description": "Публичный каталог категорий и операции модератора."},
         {"name": "points", "description": "Публичные точки карты и операции модератора."},
+        {"name": "moderator points", "description": "Административный каталог активных и архивных точек."},
         {"name": "point requests", "description": "Пользовательские заявки и их модерация."},
         {"name": "root", "description": "Служебная информация API."},
     ],
@@ -81,7 +88,9 @@ for router in (
     health_router,
     auth_router,
     categories_router,
+    moderator_categories_router,
     points_router,
+    moderator_points_router,
     point_requests_router,
 ):
     app.include_router(router, prefix=settings.api_v1_prefix)
