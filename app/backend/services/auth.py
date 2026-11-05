@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerifyMismatchError
 from fastapi import HTTPException, Request, Response, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.backend.core.config import settings
@@ -174,9 +175,11 @@ async def create_moderator(db: AsyncSession, username: str, password: str) -> Mo
         raise ValueError("Username must contain 1..80 characters")
     if len(password) < 12:
         raise ValueError("Password must contain at least 12 characters")
-    existing = await get_moderator_by_username(db, normalized)
-    if existing is not None:
-        raise ValueError("Moderator username already exists")
+    if len(password) > 1024:
+        raise ValueError("Password must contain no more than 1024 characters")
+    existing_moderator_id = await db.scalar(select(Moderator.id).limit(1))
+    if existing_moderator_id is not None:
+        raise ValueError("Only one moderator account is supported")
     moderator = Moderator(username=normalized, password_hash=_password_hasher.hash(password))
     db.add(moderator)
     await db.commit()
