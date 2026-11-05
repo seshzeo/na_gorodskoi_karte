@@ -135,10 +135,11 @@ async def get_map_point(point_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.patch("/{point_id}", response_model=PointRead, dependencies=[Depends(require_moderator)])
 async def patch_map_point(
-    point_id: int, payload: PointUpdate, db: AsyncSession = Depends(get_db)
+    point_id: int, payload: PointUpdate, db: AsyncSession = Depends(get_db),
+    moderator_id: str = Depends(require_moderator),
 ):
     try:
-        row = await update_point(db, point_id, payload.model_dump(exclude_unset=True))
+        row = await update_point(db, point_id, payload.model_dump(exclude_unset=True), moderator_id)
         return _point_data(row)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -148,9 +149,12 @@ async def patch_map_point(
     "/{point_id}", status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_moderator)],
 )
-async def delete_map_point(point_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_map_point(
+    point_id: int, db: AsyncSession = Depends(get_db),
+    moderator_id: str = Depends(require_moderator),
+):
     try:
-        await hide_point(db, point_id)
+        await hide_point(db, point_id, moderator_id)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ConflictError as exc:
@@ -162,9 +166,12 @@ async def delete_map_point(point_id: int, db: AsyncSession = Depends(get_db)):
     "/{point_id}/restore", response_model=PointRead,
     dependencies=[Depends(require_moderator)],
 )
-async def restore_map_point(point_id: int, db: AsyncSession = Depends(get_db)):
+async def restore_map_point(
+    point_id: int, db: AsyncSession = Depends(get_db),
+    moderator_id: str = Depends(require_moderator),
+):
     try:
-        row = await restore_point(db, point_id)
+        row = await restore_point(db, point_id, moderator_id)
         return _point_data(row)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -222,7 +229,7 @@ async def patch_moderator_point(
 ):
     try:
         row = await update_point(
-            db, point_id, payload.model_dump(exclude_unset=True), include_archived=True
+            db, point_id, payload.model_dump(exclude_unset=True), moderator_id, include_archived=True
         )
         return _point_data(row, include_active=True)
     except NotFoundError as exc:
@@ -236,7 +243,7 @@ async def archive_moderator_point(
     moderator_id: str = Depends(require_moderator),
 ):
     try:
-        await hide_point(db, point_id)
+        await hide_point(db, point_id, moderator_id)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ConflictError as exc:
@@ -251,7 +258,7 @@ async def restore_moderator_point(
     moderator_id: str = Depends(require_moderator),
 ):
     try:
-        row = await restore_point(db, point_id)
+        row = await restore_point(db, point_id, moderator_id)
         return _point_data(row, include_active=True)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
