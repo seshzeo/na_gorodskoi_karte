@@ -118,11 +118,12 @@ async def get_point_request(request_id: int, db: AsyncSession = Depends(get_db))
     dependencies=[Depends(require_moderator)],
 )
 async def patch_point_request(
-    request_id: int, payload: PointRequestUpdate, db: AsyncSession = Depends(get_db)
+    request_id: int, payload: PointRequestUpdate, db: AsyncSession = Depends(get_db),
+    moderator_id: str = Depends(require_moderator),
 ):
     try:
         return await update_request(
-            db, request_id, payload.model_dump(exclude_unset=True)
+            db, request_id, payload.model_dump(exclude_unset=True), moderator_id
         )
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
