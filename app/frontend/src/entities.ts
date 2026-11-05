@@ -58,10 +58,8 @@ export type PointRequestStatus = "pending" | "approved" | "rejected";
 export type PointRequestRead = PointRequest & {
   id: number;
   status: PointRequestStatus;
-  created_at: string;
-  updated_at: string;
+  rejection_reason: string | null;
   moderated_at: string | null;
-  moderated_by: string | null;
-  moderation_reason: string | null;
   point_id: number | null;
+  created_at: string;
 };
