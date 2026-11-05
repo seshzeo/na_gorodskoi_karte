@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -39,6 +39,14 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
+
+    @model_validator(mode="after")
+    def validate_cookie_security(self):
+        if self.session_cookie_samesite == "none" and not self.session_cookie_secure:
+            raise ValueError("SameSite=None requires SESSION_COOKIE_SECURE=true")
+        if self.app_env.strip().lower() == "production" and not self.session_cookie_secure:
+            raise ValueError("SESSION_COOKIE_SECURE=true is required in production")
+        return self
 
     model_config = SettingsConfigDict(
         env_file=BACKEND_DIR / ".env",
