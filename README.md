@@ -33,6 +33,17 @@ python -m app.backend.create_moderator
 Swagger: http://127.0.0.1:8000/docs  
 Health: http://127.0.0.1:8000/api/v1/health
 
+## Проверки
+
+Установить зависимости разработки и запустить unit-тесты:
+
+```powershell
+pip install -r app/backend/requirements-dev.txt
+pytest app/backend/tests -q
+```
+
+Тесты покрывают базовые проверки CSRF и валидацию входных схем. Для полной приёмки дополнительно необходимы интеграционные проверки с PostgreSQL/PostGIS и HTTP-клиентом.
+
 ## Авторизация модератора
 
 Авторизация использует серверные сессии PostgreSQL. В браузере хранится только случайный токен в cookie `moderator_session` с атрибутом HttpOnly. В базе хранится SHA-256-хеш токена.
