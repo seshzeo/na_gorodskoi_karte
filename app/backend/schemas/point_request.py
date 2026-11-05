@@ -12,6 +12,15 @@ class PointRequestStatusValue(str, Enum):
     REJECTED = "rejected"
 
 
+def _normalize_required_text(value: str) -> str:
+    if not isinstance(value, str):
+        return value
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError("Value cannot be blank")
+    return normalized
+
+
 class PointRequestCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -22,6 +31,11 @@ class PointRequestCreate(BaseModel):
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
     event_at: datetime
+
+    @field_validator("author_name", "title", "description", mode="before")
+    @classmethod
+    def normalize_text(cls, value):
+        return _normalize_required_text(value)
 
     @field_validator("event_at")
     @classmethod
@@ -41,6 +55,13 @@ class PointRequestUpdate(BaseModel):
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
     event_at: datetime | None = None
+
+    @field_validator("author_name", "title", "description", mode="before")
+    @classmethod
+    def normalize_text(cls, value):
+        if value is None:
+            return value
+        return _normalize_required_text(value)
 
     @field_validator("event_at")
     @classmethod
@@ -80,3 +101,8 @@ class PointRequestRead(ORMModel):
 class PointRequestReject(BaseModel):
     model_config = ConfigDict(extra="forbid")
     reason: str = Field(min_length=1, max_length=500)
+
+    @field_validator("reason", mode="before")
+    @classmethod
+    def normalize_reason(cls, value):
+        return _normalize_required_text(value)

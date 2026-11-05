@@ -4,7 +4,7 @@ from app.backend.repositories.category import get_active_category
 from app.backend.repositories.points import (
     get_point, list_points, make_location, nearby_points,
 )
-from app.backend.services.errors import NotFoundError
+from app.backend.services.errors import ConflictError, NotFoundError
 
 
 async def fetch_points(db: AsyncSession, **filters):
@@ -45,3 +45,15 @@ async def hide_point(db: AsyncSession, point_id: int):
         raise NotFoundError("Point not found")
     point_row[0].is_active = False
     await db.commit()
+
+
+async def restore_point(db: AsyncSession, point_id: int):
+    point_row = await get_point(db, point_id, active_only=False)
+    if point_row is None:
+        raise NotFoundError("Point not found")
+    point = point_row[0]
+    if point.is_active:
+        raise ConflictError("Point is already active")
+    point.is_active = True
+    await db.commit()
+    return await fetch_point(db, point_id)

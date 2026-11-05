@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.backend.core.database import get_db
 from app.backend.core.security import require_moderator
 from app.backend.schemas.category import CategoryCreate, CategoryRead, CategoryUpdate
+from app.backend.schemas.common import ErrorResponse
 from app.backend.services.catalog import (
     create_category,
     delete_category,
@@ -12,7 +13,7 @@ from app.backend.services.catalog import (
 )
 from app.backend.services.errors import ConflictError, NotFoundError
 
-router = APIRouter(prefix="/categories", tags=["categories"])
+router = APIRouter(\n    prefix="/categories",\n    tags=["categories"],\n    responses={\n        401: {"model": ErrorResponse},\n        403: {"model": ErrorResponse},\n        404: {"model": ErrorResponse},\n        409: {"model": ErrorResponse},\n        422: {"model": ErrorResponse},\n        503: {"model": ErrorResponse},\n    },\n)
 
 
 @router.get("", response_model=list[CategoryRead])

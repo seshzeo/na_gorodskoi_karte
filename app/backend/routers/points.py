@@ -4,12 +4,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.backend.core.database import get_db
 from app.backend.core.security import require_moderator
 from app.backend.schemas.point import PointNearbyRead, PointRead, PointUpdate
-from app.backend.services.errors import NotFoundError
+from app.backend.schemas.common import ErrorResponse
+from app.backend.services.errors import ConflictError, NotFoundError
 from app.backend.services.points import (
-    fetch_nearby_points, fetch_point, fetch_points, hide_point, update_point,
+    fetch_nearby_points, fetch_point, fetch_points, hide_point, restore_point, update_point,
 )
 
-router = APIRouter(prefix="/points", tags=["points"])
+router = APIRouter(\n    prefix="/points",\n    tags=["points"],\n    responses={\n        401: {"model": ErrorResponse},\n        403: {"model": ErrorResponse},\n        404: {"model": ErrorResponse},\n        409: {"model": ErrorResponse},\n        422: {"model": ErrorResponse},\n        503: {"model": ErrorResponse},\n    },\n)
 
 
 def _point_data(row):
@@ -105,3 +106,17 @@ async def delete_map_point(point_id: int, db: AsyncSession = Depends(get_db)):
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/{point_id}/restore", response_model=PointRead,
+    dependencies=[Depends(require_moderator)],
+)
+async def restore_map_point(point_id: int, db: AsyncSession = Depends(get_db)):
+    try:
+        row = await restore_point(db, point_id)
+        return _point_data(row)
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc

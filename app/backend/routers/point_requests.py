@@ -1,9 +1,11 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.backend.core.database import get_db
 from app.backend.core.security import require_moderator
-from app.backend.schemas.point_request import (
+from app.backend.schemas.common import ErrorResponse\nfrom app.backend.schemas.point_request import (
     PointRequestCreate, PointRequestRead, PointRequestReject, PointRequestUpdate,
 )
 from app.backend.services.errors import ConflictError, NotFoundError
@@ -11,7 +13,26 @@ from app.backend.services.point_requests import (
     approve_request, fetch_request, fetch_requests, reject_request, submit_request, update_request,
 )
 
-router = APIRouter(prefix="/point-requests", tags=["point requests"])
+router = APIRouter(\n    prefix="/point-requests",\n    tags=["point requests"],\n    responses={\n        401: {"model": ErrorResponse},\n        403: {"model": ErrorResponse},\n        404: {"model": ErrorResponse},\n        409: {"model": ErrorResponse},\n        422: {"model": ErrorResponse},\n        503: {"model": ErrorResponse},\n    },\n)
+
+
+def _validate_request_date_filters(
+    created_after: datetime | None, created_before: datetime | None
+):
+    for field_name, value in (
+        ("created_after", created_after),
+        ("created_before", created_before),
+    ):
+        if value is not None and value.utcoffset() is None:
+            raise HTTPException(
+                status_code=422,
+                detail=f"{field_name} must include a timezone",
+            )
+    if created_after and created_before and created_after > created_before:
+        raise HTTPException(
+            status_code=422,
+            detail="created_after must be earlier than or equal to created_before",
+        )
 
 
 @router.post("", response_model=PointRequestRead, status_code=status.HTTP_201_CREATED)
@@ -27,12 +48,22 @@ async def create_point_request(
 @router.get("", response_model=list[PointRequestRead], dependencies=[Depends(require_moderator)])
 async def list_point_requests(
     status_value: str | None = Query(default=None, alias="status", pattern="^(pending|approved|rejected)$"),
+    category_id: int | None = Query(default=None, gt=0),
+    created_after: datetime | None = None,
+    created_before: datetime | None = None,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
+    _validate_request_date_filters(created_after, created_before)
     return await fetch_requests(
-        db, status_value=status_value, limit=limit, offset=offset
+        db,
+        status_value=status_value,
+        category_id=category_id,
+        created_after=created_after,
+        created_before=created_before,
+        limit=limit,
+        offset=offset,
     )
 
 
