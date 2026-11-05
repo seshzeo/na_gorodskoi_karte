@@ -44,7 +44,9 @@ async def update_point(
     for field, value in changes.items():
         setattr(point, field, value)
     await db.commit()
-    return await fetch_point(db, point_id, include_archived=include_archived)
+    # Another moderator may archive the point immediately after this transaction.
+    # Return the committed row even if its active flag changed concurrently.
+    return await fetch_point(db, point_id, include_archived=True)
 
 
 async def hide_point(db: AsyncSession, point_id: int):
@@ -68,4 +70,5 @@ async def restore_point(db: AsyncSession, point_id: int):
         raise ConflictError("Point category is inactive; activate the category before restoring")
     point.is_active = True
     await db.commit()
-    return await fetch_point(db, point_id)
+    # Keep the response valid if a concurrent archive happens after restoration.
+    return await fetch_point(db, point_id, include_archived=True)
