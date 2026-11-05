@@ -35,7 +35,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     initialization = (async () => {
       try {
-        // First verify the HttpOnly session cookie, then obtain its CSRF token.
+        // Verify the HttpOnly session cookie before requesting its CSRF token.
         const moderator = await api<Moderator>("/auth/me");
         const csrfToken = await requestCsrfToken();
         setCsrfToken(csrfToken);
@@ -73,9 +73,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
-    await api<void>("/auth/logout", { method: "POST" });
-    clearCsrfToken();
-    set({ moderator: null, status: "unauthenticated", error: null });
+    try {
+      await api<void>("/auth/logout", { method: "POST" });
+      clearCsrfToken();
+      set({ moderator: null, status: "unauthenticated", error: null });
+    } catch (error) {
+      // A 401 means the server-side session is already gone or expired.
+      if (error instanceof ApiError && error.status === 401) {
+        clearCsrfToken();
+        set({ moderator: null, status: "unauthenticated", error: null });
+      }
+      throw error;
+    }
   },
 }));
 
