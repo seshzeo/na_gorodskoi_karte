@@ -37,10 +37,14 @@ def _apply_point_filters(
     return query
 
 
-async def get_point(db: AsyncSession, point_id: int, *, active_only: bool = True):
+async def get_point(
+    db: AsyncSession, point_id: int, *, active_only: bool = True, lock: bool = False
+):
     query = _point_query().where(Point.id == point_id)
     if active_only:
         query = query.where(Point.is_active.is_(True))
+    if lock:
+        query = query.with_for_update(of=Point)
     result = await db.execute(query)
     return result.one_or_none()
 
