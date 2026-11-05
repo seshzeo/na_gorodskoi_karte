@@ -8,6 +8,7 @@ from app.backend.core.security import require_moderator
 from app.backend.schemas.common import ErrorResponse
 from app.backend.schemas.point_request import (
     PointRequestCreate,
+    PointRequestPage,
     PointRequestRead,
     PointRequestReject,
     PointRequestUpdate,
@@ -67,7 +68,7 @@ async def create_point_request(
 
 @router.get(
     "",
-    response_model=list[PointRequestRead],
+    response_model=PointRequestPage,
     dependencies=[Depends(require_moderator)],
 )
 async def list_point_requests(
@@ -82,7 +83,7 @@ async def list_point_requests(
     db: AsyncSession = Depends(get_db),
 ):
     _validate_request_date_filters(created_after, created_before)
-    return await fetch_requests(
+    result = await fetch_requests(
         db,
         status_value=status_value,
         category_id=category_id,
@@ -91,6 +92,12 @@ async def list_point_requests(
         limit=limit,
         offset=offset,
     )
+    return {
+        "items": result["rows"],
+        "total": result["total"],
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 @router.get(
