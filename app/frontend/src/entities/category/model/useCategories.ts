@@ -1,0 +1,2 @@
+import {useQuery} from "@tanstack/react-query";import {api} from "../../../shared/api";import type {Category} from "../../../entities";
+export function useCategories(){return useQuery({queryKey:["categories"],queryFn:()=>api<Category[]>("/categories"),staleTime:300000,gcTime:1800000});}
