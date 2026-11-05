@@ -27,8 +27,15 @@ def _error_code(status_code: int) -> str:
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.4.0",
+    version="0.5.0",
     description="Backend сервиса интерактивной карты и пользовательских точек.",
+    openapi_tags=[
+        {"name": "health", "description": "Проверка состояния API и базы данных."},
+        {"name": "categories", "description": "Публичный каталог категорий и операции модератора."},
+        {"name": "points", "description": "Публичные точки карты и операции модератора."},
+        {"name": "point requests", "description": "Пользовательские заявки и их модерация."},
+        {"name": "root", "description": "Служебная информация API."},
+    ],
 )
 
 
