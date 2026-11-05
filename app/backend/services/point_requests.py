@@ -74,7 +74,7 @@ async def approve_request(db: AsyncSession, request_id: int, moderator_id: str):
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
-        raise ConflictError("Could not reject point request") from exc
+        raise ConflictError("Could not approve point request") from exc
     await db.refresh(request)
     return request
 
