@@ -5,7 +5,6 @@ from datetime import datetime, timedelta, timezone
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerifyMismatchError
 from fastapi import HTTPException, Request, Response, status
-from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.backend.core.config import settings
@@ -167,7 +166,7 @@ def clear_session_cookie(response: Response) -> None:
 
 
 async def create_moderator(db: AsyncSession, username: str, password: str) -> Moderator:
-    normalized = username.strip()
+    normalized = username.strip().lower()
     if not normalized or len(normalized) > 80:
         raise ValueError("Username must contain 1..80 characters")
     if len(password) < 12:
