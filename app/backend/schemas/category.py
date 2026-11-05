@@ -11,6 +11,18 @@ class CategoryRead(ORMModel):
     slug: str
 
 
+class CategoryAdminRead(CategoryRead):
+    is_active: bool
+    is_builtin: bool
+
+
+class CategoryAdminPage(BaseModel):
+    items: list[CategoryAdminRead]
+    total: int
+    limit: int
+    offset: int
+
+
 class CategoryCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -39,6 +51,7 @@ class CategoryUpdate(BaseModel):
 
     name: str | None = Field(default=None, min_length=1, max_length=80)
     slug: str | None = Field(default=None, min_length=1, max_length=80)
+    is_active: bool | None = None
 
     @field_validator("name")
     @classmethod
