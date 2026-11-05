@@ -35,7 +35,7 @@ class PointRequest(Base):
     )
     rejection_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
     moderated_by: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("moderators.id", ondelete="SET NULL"), nullable=True
+        String(36), ForeignKey("moderators.id", name="fk_point_requests_moderated_by_moderators", ondelete="SET NULL"), nullable=True
     )
     moderated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     point_id: Mapped[int | None] = mapped_column(ForeignKey("points.id", ondelete="SET NULL"), unique=True, nullable=True)
