@@ -1,2 +1,10 @@
+# Development and test dependencies.
 -r requirements.txt
+
+# Test runner and coverage reporting.
 pytest>=8.0,<10.0
+pytest-cov>=6.0,<8.0
+
+# Async test support and HTTP client for FastAPI endpoint tests.
+pytest-asyncio>=1.0,<2.0
+httpx>=0.27,<1.0
