@@ -11,8 +11,8 @@ from app.backend.repositories.category import (
     list_active_categories,
     list_all_categories,
 )
-from app.backend.services.errors import ConflictError, NotFoundError
 from app.backend.services.audit import record_moderator_action
+from app.backend.services.errors import ConflictError, NotFoundError
 
 
 async def get_categories(db: AsyncSession):
@@ -35,18 +35,16 @@ async def create_category(db: AsyncSession, payload: dict, moderator_id: str) ->
         name=payload["name"], slug=payload["slug"], is_active=True, is_builtin=False
     )
     db.add(category)
-    await db.flush()
-    await record_moderator_action(
-        db, moderator_id=moderator_id, action="category.created",
-        object_type="category", object_id=category.id,
-        details={"name": category.name, "slug": category.slug},
-    )
-    await record_moderator_action(
-        db, moderator_id=moderator_id, action="category.updated",
-        object_type="category", object_id=category_id,
-        details={"changed_fields": sorted(changes)},
-    )
     try:
+        await db.flush()
+        await record_moderator_action(
+            db,
+            moderator_id=moderator_id,
+            action="category.created",
+            object_type="category",
+            object_id=category.id,
+            details={"name": category.name, "slug": category.slug},
+        )
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
@@ -87,6 +85,14 @@ async def update_category(
     for field, value in changes.items():
         setattr(category, field, value)
 
+    await record_moderator_action(
+        db,
+        moderator_id=moderator_id,
+        action="category.updated",
+        object_type="category",
+        object_id=category_id,
+        details={"changed_fields": sorted(changes)},
+    )
     try:
         await db.commit()
     except IntegrityError as exc:
@@ -113,8 +119,11 @@ async def delete_category(db: AsyncSession, category_id: int, moderator_id: str)
         raise ConflictError("Category is used by points or point requests")
 
     await record_moderator_action(
-        db, moderator_id=moderator_id, action="category.deleted",
-        object_type="category", object_id=category_id,
+        db,
+        moderator_id=moderator_id,
+        action="category.deleted",
+        object_type="category",
+        object_id=category_id,
         details={"name": category.name, "slug": category.slug},
     )
     await db.delete(category)
