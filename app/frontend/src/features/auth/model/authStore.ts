@@ -1,5 +1,5 @@
+import { useEffect } from "react";
 import { create } from "zustand";
-import type { FormEvent } from "react";
 import type { LoginResponse, Moderator } from "../../../entities";
 import { api, ApiError, clearCsrfToken, requestCsrfToken, setCsrfToken } from "../../../shared/api";
 
@@ -25,7 +25,7 @@ function getErrorMessage(error: unknown): string {
 
 let initialization: Promise<void> | null = null;
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   moderator: null,
   status: "loading",
   error: null,
@@ -35,6 +35,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     initialization = (async () => {
       try {
+        // First verify the HttpOnly session cookie, then obtain its CSRF token.
         const moderator = await api<Moderator>("/auth/me");
         const csrfToken = await requestCsrfToken();
         setCsrfToken(csrfToken);
@@ -57,6 +58,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (username, password) => {
     set({ error: null });
     try {
+      // A pre-login CSRF context is required; login rotates it on success.
       await requestCsrfToken();
       const response = await api<LoginResponse>("/auth/login", {
         method: "POST",
@@ -79,20 +81,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
 export function AuthBootstrap() {
   const initialize = useAuthStore((state) => state.initialize);
-  ReactUseAuthBootstrap(initialize);
-  return null;
-}
-
-function ReactUseAuthBootstrap(initialize: () => Promise<void>) {
-  // Kept in a tiny component so session restoration runs once per app mount.
-  const { useEffect } = requireReact();
   useEffect(() => {
     void initialize();
   }, [initialize]);
+  return null;
 }
-
-function requireReact() {
-  return ReactHooks;
-}
-
-import * as ReactHooks from "react";
