@@ -106,3 +106,10 @@ class PointRequestReject(BaseModel):
     @classmethod
     def normalize_reason(cls, value):
         return _normalize_required_text(value)
+
+
+class PointRequestPage(BaseModel):
+    items: list[PointRequestRead]
+    total: int
+    limit: int
+    offset: int
