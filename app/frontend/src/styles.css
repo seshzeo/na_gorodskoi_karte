@@ -149,3 +149,5 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
  .dialog-footer .button{width:100%}
  .moderator-panel-heading{align-items:flex-start;flex-direction:column}
 }
+
+[data-theme="dark"] .base-map-layer canvas{filter:invert(88%) hue-rotate(180deg) brightness(.82) contrast(.9)}
