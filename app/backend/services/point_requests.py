@@ -9,6 +9,7 @@ from app.backend.repositories.category import get_active_category
 from app.backend.repositories.point_requests import get_request, list_requests
 from app.backend.repositories.points import make_location
 from app.backend.services.errors import ConflictError, NotFoundError
+from app.backend.services.audit import record_moderator_action
 
 
 async def submit_request(db: AsyncSession, payload: dict):
@@ -31,10 +32,11 @@ async def fetch_request(db: AsyncSession, request_id: int):
 
 
 async def fetch_requests(db: AsyncSession, **filters):
-    return await list_requests(db, **filters)
+    rows, total = await list_requests(db, **filters)
+    return {"rows": rows, "total": total}
 
 
-async def update_request(db: AsyncSession, request_id: int, changes: dict):
+async def update_request(db: AsyncSession, request_id: int, changes: dict, moderator_id: str):
     request = await get_request(db, request_id, lock=True)
     if request is None:
         raise NotFoundError("Point request not found")
@@ -44,6 +46,11 @@ async def update_request(db: AsyncSession, request_id: int, changes: dict):
         raise NotFoundError("Active category not found")
     for key, value in changes.items():
         setattr(request, key, value)
+    await record_moderator_action(
+        db, moderator_id=moderator_id, action="request.updated",
+        object_type="point_request", object_id=request.id,
+        details={"changed_fields": sorted(changes)},
+    )
     await db.commit()
     await db.refresh(request)
     return request
@@ -55,6 +62,7 @@ async def approve_request(db: AsyncSession, request_id: int, moderator_id: str):
         raise NotFoundError("Point request not found")
     if request.status != PointRequestStatus.PENDING:
         raise ConflictError("Only pending requests can be approved")
+
     point = Point(
         title=request.title,
         description=request.description,
@@ -65,16 +73,23 @@ async def approve_request(db: AsyncSession, request_id: int, moderator_id: str):
         is_active=True,
     )
     db.add(point)
-    await db.flush()
-    request.status = PointRequestStatus.APPROVED
-    request.point_id = point.id
-    request.moderated_by = moderator_id
-    request.moderated_at = datetime.now(timezone.utc)
     try:
+        # Keep INSERT, request state transition and audit fields in one transaction.
+        await db.flush()
+        request.status = PointRequestStatus.APPROVED
+        request.point_id = point.id
+        request.moderated_by = moderator_id
+        request.moderated_at = datetime.now(timezone.utc)
+        await record_moderator_action(
+            db, moderator_id=moderator_id, action="request.approved",
+            object_type="point_request", object_id=request.id,
+            details={"point_id": point.id},
+        )
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
-        raise ConflictError("Could not reject point request") from exc
+        raise ConflictError("Could not approve point request") from exc
+
     await db.refresh(request)
     return request
 
@@ -89,6 +104,11 @@ async def reject_request(db: AsyncSession, request_id: int, moderator_id: str, r
     request.rejection_reason = reason
     request.moderated_by = moderator_id
     request.moderated_at = datetime.now(timezone.utc)
+    await record_moderator_action(
+        db, moderator_id=moderator_id, action="request.rejected",
+        object_type="point_request", object_id=request.id,
+        details={"reason": reason},
+    )
     await db.commit()
     await db.refresh(request)
     return request

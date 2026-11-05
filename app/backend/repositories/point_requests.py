@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.backend.models.point_request import PointRequest
@@ -24,17 +24,27 @@ async def list_requests(
     limit: int,
     offset: int,
 ):
-    query = select(PointRequest)
+    filters = []
     if status_value:
-        query = query.where(PointRequest.status == status_value)
+        filters.append(PointRequest.status == status_value)
     if category_id is not None:
-        query = query.where(PointRequest.category_id == category_id)
+        filters.append(PointRequest.category_id == category_id)
     if created_after is not None:
-        query = query.where(PointRequest.created_at >= created_after)
+        filters.append(PointRequest.created_at >= created_after)
     if created_before is not None:
-        query = query.where(PointRequest.created_at <= created_before)
-    result = await db.execute(
-        query.order_by(PointRequest.created_at.desc(), PointRequest.id.desc())
-        .limit(limit).offset(offset)
+        filters.append(PointRequest.created_at <= created_before)
+
+    count_query = select(func.count()).select_from(
+        select(PointRequest.id).where(*filters).subquery()
     )
-    return list(result.scalars().all())
+    total = int(await db.scalar(count_query) or 0)
+
+    query = (
+        select(PointRequest)
+        .where(*filters)
+        .order_by(PointRequest.created_at.desc(), PointRequest.id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    result = await db.execute(query)
+    return list(result.scalars().all()), total

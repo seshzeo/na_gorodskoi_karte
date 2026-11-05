@@ -11,6 +11,7 @@ class Category(Base):
     name: Mapped[str] = mapped_column(String(80), unique=True, nullable=False)
     slug: Mapped[str] = mapped_column(String(80), unique=True, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_builtin: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
 
     points: Mapped[list["Point"]] = relationship(back_populates="category")
     point_requests: Mapped[list["PointRequest"]] = relationship(back_populates="category")
