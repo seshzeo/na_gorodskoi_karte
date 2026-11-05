@@ -1,22 +1,15 @@
-import secrets
+from fastapi import Depends, Header, Request
 
-from fastapi import Header, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.backend.core.config import settings
+from app.backend.core.database import get_db
+from app.backend.services.auth import get_current_moderator
 
 
 async def require_moderator(
-    x_moderator_key: str | None = Header(default=None, alias="X-Moderator-Key"),
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    x_csrf_token: str | None = Header(default=None, alias="X-CSRF-Token"),
 ) -> str:
-    configured_key = settings.moderator_api_key
-    if not configured_key:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Moderator access is not configured",
-        )
-    if not x_moderator_key or not secrets.compare_digest(x_moderator_key, configured_key):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid moderator credentials",
-        )
-    return "api-key-moderator"
+    moderator, _ = await get_current_moderator(db, request, x_csrf_token)
+    return moderator.id
