@@ -19,6 +19,24 @@ class PointRead(ORMModel):
     updated_at: datetime
 
 
+class PointPage(BaseModel):
+    items: list[PointRead]
+    total: int
+    limit: int
+    offset: int
+
+
+class ModeratorPointRead(PointRead):
+    is_active: bool
+
+
+class ModeratorPointPage(BaseModel):
+    items: list[ModeratorPointRead]
+    total: int
+    limit: int
+    offset: int
+
+
 class PointNearbyRead(PointRead):
     distance_m: float
 
@@ -33,6 +51,16 @@ class PointUpdate(BaseModel):
     author_name: str | None = Field(default=None, min_length=1, max_length=120)
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
+
+    @field_validator("title", "description", "author_name", mode="before")
+    @classmethod
+    def normalize_text(cls, value):
+        if value is None or not isinstance(value, str):
+            return value
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("Value cannot be blank")
+        return normalized
 
     @field_validator("event_at")
     @classmethod
