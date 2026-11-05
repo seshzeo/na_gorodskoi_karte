@@ -75,6 +75,9 @@ async def issue_csrf_token(
         session.last_activity_at = now
         session.expires_at = _expires_at()
         await db.commit()
+        existing_token = request.cookies.get(settings.session_cookie_name)
+        if existing_token:
+            set_session_cookie(response, existing_token)
     return token
 
 
