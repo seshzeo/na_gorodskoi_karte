@@ -58,7 +58,7 @@ async def hide_point(db: AsyncSession, point_id: int):
 
 
 async def restore_point(db: AsyncSession, point_id: int):
-    point_row = await get_point(db, point_id, active_only=False)
+    point_row = await get_point(db, point_id, active_only=False, lock=True)
     if point_row is None:
         raise NotFoundError("Point not found")
     point = point_row[0]
