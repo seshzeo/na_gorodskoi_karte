@@ -223,6 +223,23 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 @media(max-width:480px){.request-meta{grid-template-columns:1fr 1fr}.request-refresh{margin-left:0}}
 
 
+
+/* Keep OpenLayers zoom controls clear of the floating brand and toolbar */
+.app-shell:has(.map-page) .ol-zoom{
+ top:50%;
+ right:18px;
+ left:auto;
+ transform:translateY(-50%);
+ z-index:15;
+}
+@media(max-width:720px){
+ .app-shell:has(.map-page) .ol-zoom{
+  top:50%;
+  right:10px;
+  left:auto;
+ }
+}
+
 /* Full-screen map composition */
 .app-shell:has(.map-page){position:relative;overflow:hidden}
 .app-shell:has(.map-page) .app-header{position:absolute;inset:12px 14px auto;height:52px;min-height:52px;padding:0;background:transparent;border:0;z-index:35;pointer-events:none}
