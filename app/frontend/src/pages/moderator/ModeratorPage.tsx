@@ -156,9 +156,11 @@ export function ModeratorPage() {
         <div className="moderator-layout">
           <nav className="moderator-nav">
             <div className="moderator-nav-title">Рабочая область</div>
-            <div className="moderator-nav-item active">▤ <span>Заявки</span></div>
-            <div className="moderator-nav-item disabled">⌖ <span>Опубликованные точки</span><small>Скоро</small></div>
-            <div className="moderator-nav-item disabled">◇ <span>Категории</span><small>Скоро</small></div>
+            <div className="moderator-nav-items">
+              <div className="moderator-nav-item active">▤ <span>Заявки</span></div>
+              <div className="moderator-nav-item disabled">⌖ <span>Опубликованные точки</span><small>Скоро</small></div>
+              <div className="moderator-nav-item disabled">◇ <span>Категории</span><small>Скоро</small></div>
+            </div>
             <div className="moderator-account">
               <span>Вы вошли как</span>
               <strong>{moderator.username}</strong>
