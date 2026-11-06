@@ -27,7 +27,7 @@ export function MapPage(){
 
 function CreateModal({categories,onClose}:{categories:Category[];onClose:()=>void}){
  const qc=useQueryClient();
- const [f,setF]=useState({author_name:"",title:"",description:"",category_id:"",latitude:"51.533",longitude:"46.034",event_at:""});
+ const [f,setF]=useState({author_name:"",title:"",description:"",category_id:"",latitude:"52.017",longitude:"47.810",event_at:""});
  const mutation=useMutation({mutationFn:(payload:PointRequest)=>api("/point-requests",{method:"POST",body:JSON.stringify(payload)}),onSuccess:()=>{qc.invalidateQueries({queryKey:["points"]});onClose();}});
  const set=(key:keyof typeof f,value:string)=>setF(current=>({...current,[key]:value}));
  const error=mutation.error instanceof ApiError?String(mutation.error.detail):mutation.isError?"Не удалось отправить заявку. Проверьте соединение и попробуйте ещё раз.":"";
@@ -41,7 +41,7 @@ function CreateModal({categories,onClose}:{categories:Category[];onClose:()=>voi
     <label className="form-field"><span>Широта</span><input required type="number" min="-90" max="90" step="any" value={f.latitude} onChange={e=>set("latitude",e.target.value)}/></label>
     <label className="form-field"><span>Долгота</span><input required type="number" min="-180" max="180" step="any" value={f.longitude} onChange={e=>set("longitude",e.target.value)}/></label>
    </div><small className="field-hint">Пока координаты задаются вручную. Выбор места непосредственно на карте добавим отдельным этапом.</small></div>
-   <label className="form-field"><span>Дата и время события <b>*</b></span><input required type="datetime-local" value={f.event_at} onChange={e=>set("event_at",e.target.value)}/></label>
+   <label className="form-field"><span>Дата и время события <b>*</b></span><input required type="datetime-local" max={new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)} value={f.event_at} onChange={e=>set("event_at",e.target.value)}/><small className="field-hint">Указывайте только дату и время уже прошедшего события.</small></label>
    <label className="form-field"><span>Ваше имя <b>*</b></span><input required maxLength={120} value={f.author_name} onChange={e=>set("author_name",e.target.value)} placeholder="Как к вам обращаться"/></label>
   </div>
   {error&&<div className="form-error" role="alert">{error}</div>}
