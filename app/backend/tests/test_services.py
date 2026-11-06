@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from app.backend.models.point_request import PointRequestStatus
+from app.backend.models.point import Point\nfrom app.backend.models.point_request import PointRequestStatus
 from app.backend.services import auth, catalog, point_requests, points
 from app.backend.services.errors import ConflictError, NotFoundError
 
@@ -278,7 +278,7 @@ async def test_approve_request_persists_point_and_audit_metadata(monkeypatch):
 
     def add_and_assign_id(obj):
         created.append(obj)
-        if isinstance(obj, points.Point):
+        if isinstance(obj, Point):
             obj.id = 901
 
     db.add.side_effect = add_and_assign_id
