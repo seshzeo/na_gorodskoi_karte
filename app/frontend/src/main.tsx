@@ -12,7 +12,7 @@ import "./styles.css";
 
 const client=new QueryClient({defaultOptions:{queries:{staleTime:30000,gcTime:300000,refetchOnWindowFocus:false,retry:1}}});
 ReactDOM.createRoot(document.getElementById("root")!).render(
- <React.StrictMode><ThemeProvider><QueryClientProvider client={client}><BrowserRouter>
+ <React.StrictMode><ThemeProvider><CityProvider><QueryClientProvider client={client}><BrowserRouter>
   <AuthBootstrap/>
   <Routes><Route element={<AppLayout/>}><Route path="/" element={<MapPage/>}/><Route path="/moderator" element={<ModeratorPage/>}/></Route></Routes>
  </BrowserRouter></QueryClientProvider></CityProvider></ThemeProvider></React.StrictMode>
