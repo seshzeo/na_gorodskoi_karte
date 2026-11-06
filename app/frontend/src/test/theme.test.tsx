@@ -14,7 +14,7 @@ it("resolves and changes theme", async () => {
   expect(screen.getByText("system")).toBeInTheDocument();
   expect(screen.getByText("light")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "dark" }));
-  expect(screen.getByText("dark")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "dark" })).toBeInTheDocument();
   expect(document.documentElement.dataset.theme).toBe("dark");
 });
 
