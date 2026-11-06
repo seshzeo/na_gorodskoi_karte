@@ -63,3 +63,75 @@ async def test_point_repository_filters_and_queries():
     assert await points.save_point(db, obj) is obj
     db.add.assert_called_once_with(obj)
     assert "POINT(46.0 51.5)" in str(points.make_location(51.5, 46.0))
+
+
+@pytest.mark.asyncio
+async def test_point_repository_builds_expected_spatial_filters_and_stable_order():
+    from sqlalchemy.dialects import postgresql
+    from sqlalchemy.sql import select
+    from app.backend.models.point import Point
+
+    query = points._apply_point_filters(
+        select(Point),
+        bbox=(45.0, 51.0, 47.0, 52.0),
+        category_ids=[2, 4],
+        event_after=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        event_before=datetime(2026, 2, 1, tzinfo=timezone.utc),
+    ).order_by(Point.event_at.asc(), Point.id.asc()).limit(25).offset(50)
+
+    compiled = query.compile(dialect=postgresql.dialect())
+    sql = str(compiled)
+    assert "ST_Intersects" in sql
+    assert "ST_MakeEnvelope" in sql
+    assert "category_id" in sql and "IN" in sql
+    assert "event_at >=" in sql and "event_at <" in sql
+    assert "ORDER BY" in sql and "LIMIT" in sql and "OFFSET" in sql
+    assert list(compiled.params.values()).count(45.0) == 1
+    assert list(compiled.params.values()).count(51.0) == 1
+
+
+@pytest.mark.asyncio
+async def test_nearby_repository_uses_geography_distance_and_radius():
+    from sqlalchemy.dialects import postgresql
+
+    db = MagicMock()
+    result = Result(values=[("point", 46.0, 51.5, 125.0)])
+    db.execute = AsyncMock(return_value=result)
+
+    rows = await points.nearby_points(
+        db, latitude=51.5, longitude=46.0, radius=1000, limit=10
+    )
+    assert rows == [("point", 46.0, 51.5, 125.0)]
+
+    statement = db.execute.await_args.args[0]
+    compiled = statement.compile(dialect=postgresql.dialect())
+    sql = str(compiled)
+    assert "ST_DWithin" in sql
+    assert "ST_Distance" in sql
+    assert "ST_SetSRID" in sql and "ST_MakePoint" in sql
+    assert "ORDER BY" in sql and "LIMIT" in sql
+    assert 1000 in compiled.params.values()
+
+
+@pytest.mark.asyncio
+async def test_request_repository_query_contains_filters_order_and_pagination():
+    from sqlalchemy.dialects import postgresql
+
+    db = MagicMock()
+    db.scalar = AsyncMock(return_value=7)
+    db.execute = AsyncMock(return_value=Result(values=[]))
+    after = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    before = datetime(2026, 2, 1, tzinfo=timezone.utc)
+
+    rows, total = await point_requests.list_requests(
+        db, status_value="pending", category_id=3,
+        created_after=after, created_before=before, limit=15, offset=30,
+    )
+    assert rows == [] and total == 7
+    statement = db.execute.await_args.args[0]
+    compiled = statement.compile(dialect=postgresql.dialect())
+    sql = str(compiled)
+    assert "status" in sql and "category_id" in sql
+    assert "created_at >=" in sql and "created_at <=" in sql
+    assert "ORDER BY" in sql and "LIMIT" in sql and "OFFSET" in sql
+    assert "DESC" in sql
