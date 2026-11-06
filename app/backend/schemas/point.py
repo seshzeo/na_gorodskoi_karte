@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -67,6 +67,8 @@ class PointUpdate(BaseModel):
     def event_at_must_be_timezone_aware(cls, value):
         if value is not None and value.utcoffset() is None:
             raise ValueError("event_at must include a timezone")
+        if value is not None and value >= datetime.now(timezone.utc):
+            raise ValueError("event_at must be in the past")
         return value
 
     @model_validator(mode="after")
