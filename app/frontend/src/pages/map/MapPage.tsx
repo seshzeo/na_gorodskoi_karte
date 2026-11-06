@@ -8,8 +8,7 @@ export function MapPage(){
  const categories=useCategories();const {city}=useCity();
  const openCreate=(coordinates:Coordinates)=>{setSelected(undefined);setInitialCoordinates(coordinates);setOpen(true);};
  return <section className="map-page">
-  <div className="map-toolbar"><div><span className="page-kicker">Исследуйте город</span><h1>Карта города · {city.name}</h1></div>
-   <div className="map-toolbar-actions"><CategoryFilter value={cat} onChange={setCat}/><button className="button button-primary" onClick={()=>openCreate({latitude:city.latitude,longitude:city.longitude})}><span>＋</span> Добавить точку</button></div>
+  <div className="map-toolbar"><div className="map-toolbar-actions"><CategoryFilter value={cat} onChange={setCat}/><button className="button button-primary" onClick={()=>openCreate({latitude:city.latitude,longitude:city.longitude})}><span>＋</span> Добавить точку</button></div>
   </div>
   <div className="map-stage"><MapWidget categoryId={cat} city={city} onSelect={point=>{setOpen(false);setSelected(point);}} onMapClick={openCreate}/>
    {selected&&<aside className="point-card" aria-label="Выбранная точка"><div className="point-card-head"><span className="category-chip">{selected.category_name}</span><button className="icon-button close-card" onClick={()=>setSelected(undefined)} aria-label="Закрыть карточку">×</button></div>
