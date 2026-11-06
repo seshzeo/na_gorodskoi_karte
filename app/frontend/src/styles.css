@@ -136,10 +136,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
  .point-card{left:10px;right:10px;bottom:10px;width:auto}
  .workspace-page{padding:20px 14px}
  .moderator-layout{grid-template-columns:1fr}
- .moderator-nav{display:flex;align-items:stretch;flex-wrap:wrap;gap:5px;overflow:visible;padding:8px}
+ .moderator-nav{display:flex;flex-direction:column;align-items:stretch;gap:8px;overflow:visible;padding:8px}
  .moderator-nav-title{display:none}
- .moderator-nav-item{white-space:nowrap;flex:1 1 calc(50% - 5px);min-width:140px}
- .moderator-account{flex:1 1 100%;min-width:100%}
+ .moderator-nav-items{display:flex;flex-wrap:wrap;align-items:stretch;gap:5px;width:100%}
+ .moderator-nav-item{white-space:nowrap;flex:1 1 140px;min-width:140px}
+ .moderator-account{width:100%;flex:0 0 auto}
  .moderator-content{padding:15px}
 }
 @media(max-width:480px){
