@@ -32,3 +32,14 @@ async def client(test_app: FastAPI) -> AsyncGenerator[httpx.AsyncClient, None]:
     transport = ASGITransport(app=test_app)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
         yield client
+
+
+@pytest_asyncio.fixture
+async def anonymous_client() -> AsyncGenerator[httpx.AsyncClient, None]:
+    """HTTP client with DB dependency isolated but real moderator auth dependency."""
+    app.dependency_overrides.clear()
+    app.dependency_overrides[get_db] = lambda: DummySession()
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        yield client
+    app.dependency_overrides.clear()
