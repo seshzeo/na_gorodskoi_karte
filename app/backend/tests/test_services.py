@@ -258,3 +258,79 @@ async def test_auth_login_invalid_password_and_inactive(monkeypatch):
     monkeypatch.setattr(auth, "get_moderator_by_username", AsyncMock(return_value=None))
     with pytest.raises(Exception) as exc: await auth.login(db,MagicMock(),MagicMock(),"admin","bad","csrf")
     assert getattr(exc.value,"status_code",None) == 401
+
+
+@pytest.mark.asyncio
+async def test_approve_request_persists_point_and_audit_metadata(monkeypatch):
+    event_at = datetime(2026, 12, 1, 12, 0, tzinfo=timezone.utc)
+    request = SimpleNamespace(
+        id=41, status=PointRequestStatus.PENDING, category_id=7,
+        title="Festival", description="City event", latitude=51.5,
+        longitude=46.0, event_at=event_at, author_name="Author",
+        point_id=None, moderated_by=None, moderated_at=None,
+    )
+    db = MagicMock()
+    db.add = MagicMock()
+    db.flush = AsyncMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    created = []
+
+    def add_and_assign_id(obj):
+        created.append(obj)
+        if isinstance(obj, points.Point):
+            obj.id = 901
+
+    db.add.side_effect = add_and_assign_id
+    audit = AsyncMock()
+    monkeypatch.setattr(point_requests, "get_request", AsyncMock(return_value=request))
+    monkeypatch.setattr(point_requests, "record_moderator_action", audit)
+
+    result = await point_requests.approve_request(db, 41, "moderator-1")
+
+    assert result is request
+    assert len(created) == 1
+    created_point = created[0]
+    assert created_point.title == "Festival"
+    assert created_point.description == "City event"
+    assert created_point.category_id == 7
+    assert created_point.event_at == event_at
+    assert created_point.author_name == "Author"
+    assert created_point.is_active is True
+    assert request.status == PointRequestStatus.APPROVED
+    assert request.point_id == 901
+    assert request.moderated_by == "moderator-1"
+    assert request.moderated_at is not None
+    db.flush.assert_awaited_once()
+    db.commit.assert_awaited_once()
+    db.refresh.assert_awaited_once_with(request)
+    audit.assert_awaited_once()
+    assert audit.await_args.kwargs["action"] == "request.approved"
+    assert audit.await_args.kwargs["details"] == {"point_id": 901}
+
+
+@pytest.mark.asyncio
+async def test_reject_request_persists_reason_and_audit(monkeypatch):
+    request = SimpleNamespace(
+        id=42, status=PointRequestStatus.PENDING, rejection_reason=None,
+        moderated_by=None, moderated_at=None,
+    )
+    db = MagicMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    audit = AsyncMock()
+    monkeypatch.setattr(point_requests, "get_request", AsyncMock(return_value=request))
+    monkeypatch.setattr(point_requests, "record_moderator_action", audit)
+
+    result = await point_requests.reject_request(db, 42, "moderator-2", "Not relevant")
+
+    assert result is request
+    assert request.status == PointRequestStatus.REJECTED
+    assert request.rejection_reason == "Not relevant"
+    assert request.moderated_by == "moderator-2"
+    assert request.moderated_at is not None
+    db.commit.assert_awaited_once()
+    db.refresh.assert_awaited_once_with(request)
+    audit.assert_awaited_once()
+    assert audit.await_args.kwargs["action"] == "request.rejected"
+    assert audit.await_args.kwargs["details"] == {"reason": "Not relevant"}
