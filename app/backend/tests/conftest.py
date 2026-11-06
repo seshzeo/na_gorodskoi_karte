@@ -2,6 +2,7 @@ from collections.abc import AsyncGenerator
 
 import httpx
 import pytest
+import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport
 
@@ -26,7 +27,7 @@ def test_app() -> FastAPI:
     app.dependency_overrides.clear()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def client(test_app: FastAPI) -> AsyncGenerator[httpx.AsyncClient, None]:
     transport = ASGITransport(app=test_app)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
