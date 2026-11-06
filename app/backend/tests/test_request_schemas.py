@@ -4,6 +4,7 @@ from pydantic import ValidationError
 from app.backend.schemas.auth import LoginRequest
 from app.backend.schemas.category import CategoryUpdate
 from app.backend.schemas.point import PointUpdate
+from app.backend.schemas.point_request import PointRequestCreate
 
 
 def test_login_rejects_unknown_fields():
@@ -35,3 +36,35 @@ def test_point_update_accepts_coordinate_pair():
 def test_point_update_requires_timezone_aware_event_datetime():
     with pytest.raises(ValidationError):
         PointUpdate(event_at="2026-11-10T18:00:00")
+
+
+
+def test_point_update_rejects_future_event_datetime():
+    with pytest.raises(ValidationError, match="event_at must be in the past"):
+        PointUpdate(event_at="2099-11-10T18:00:00+04:00")
+
+
+def test_point_request_create_rejects_future_event_datetime():
+    with pytest.raises(ValidationError, match="event_at must be in the past"):
+        PointRequestCreate(
+            author_name="Тестовый автор",
+            title="Вымышленное событие",
+            description="Тестовое описание",
+            category_id=1,
+            latitude=52.0,
+            longitude=47.8,
+            event_at="2099-11-10T18:00:00+04:00",
+        )
+
+
+def test_point_request_create_accepts_past_event_datetime():
+    payload = PointRequestCreate(
+        author_name="Тестовый автор",
+        title="Вымышленное событие",
+        description="Тестовое описание",
+        category_id=1,
+        latitude=52.0,
+        longitude=47.8,
+        event_at="2020-01-01T12:00:00+04:00",
+    )
+    assert payload.event_at.year == 2020
