@@ -131,7 +131,7 @@ async def test_point_update_paths(monkeypatch):
     changes = {"title":"New","category_id":2,"latitude":51.6,"longitude":46.1}
     result = await points.update_point(db, 1, changes, "m1")
     assert result[0].title == "New" and point.location == (51.6,46.1)
-    assert "latitude" in changes is False
+    assert "latitude" not in changes and "longitude" not in changes
 
 
 @pytest.mark.asyncio
