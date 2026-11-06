@@ -29,11 +29,15 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .sidebar-link:hover{background:var(--surface-muted);color:var(--text)}
 .sidebar-link.active{background:color-mix(in srgb,var(--color-primary) 11%,var(--surface));color:var(--color-primary);font-weight:700}
 .nav-icon{width:20px;text-align:center;font-size:19px}
+.sidebar-city{display:grid;gap:7px;margin:17px 4px 2px;padding:12px 10px;border:1px solid var(--border);border-radius:11px;background:var(--surface)}
+.sidebar-city label{font-size:10px;font-weight:750;color:var(--text-muted)}
+.sidebar-city select{width:100%;height:38px;padding:0 9px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px}
+.sidebar-city small{font-size:9px;line-height:1.4;color:var(--text-muted)}
 .sidebar-divider{height:1px;background:var(--border);margin:18px 5px 13px}
 .sidebar-foot{margin-top:auto;padding:12px 9px;display:flex;align-items:center;gap:9px;color:var(--text-muted);font-size:11px}
 .sidebar-foot-mark{font-size:9px;color:var(--color-success)}
 .app-sidebar.collapsed{width:var(--sidebar-compact-width);flex-basis:var(--sidebar-compact-width);padding-inline:9px}
-.app-sidebar.collapsed .eyebrow,.app-sidebar.collapsed .nav-label,.app-sidebar.collapsed .sidebar-foot{display:none}
+.app-sidebar.collapsed .eyebrow,.app-sidebar.collapsed .nav-label,.app-sidebar.collapsed .sidebar-foot,.app-sidebar.collapsed .sidebar-city{display:none}
 .app-sidebar.collapsed .sidebar-topline{justify-content:center}
 .app-sidebar.collapsed .sidebar-link{justify-content:center;padding:0}
 .app-sidebar.collapsed .sidebar-divider{margin-top:18px}
