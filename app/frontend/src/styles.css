@@ -234,9 +234,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 }
 @media(max-width:720px){
  .app-shell:has(.map-page) .ol-zoom{
-  top:50%;
-  right:10px;
-  left:auto;
+  display:none;
  }
 }
 
