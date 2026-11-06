@@ -92,6 +92,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .moderator-nav,.moderator-content{border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow-sm)}
 .moderator-nav{padding:13px}
 .moderator-nav-title{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:750;padding:8px 9px 12px}
+.moderator-nav-items{display:flex;flex-wrap:wrap;align-items:stretch;gap:5px;width:100%}
 .moderator-nav-item{min-height:40px;padding:0 10px;display:flex;align-items:center;gap:9px;border-radius:9px;color:var(--text-muted);font-size:12px;font-weight:600}
 .moderator-nav-item.active{background:color-mix(in srgb,var(--color-primary) 10%,var(--surface));color:var(--color-primary)}
 .moderator-nav-item.disabled{opacity:.55}
