@@ -136,9 +136,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
  .point-card{left:10px;right:10px;bottom:10px;width:auto}
  .workspace-page{padding:20px 14px}
  .moderator-layout{grid-template-columns:1fr}
- .moderator-nav{display:flex;align-items:center;gap:5px;overflow:auto;padding:8px}
+ .moderator-nav{display:flex;align-items:stretch;flex-wrap:wrap;gap:5px;overflow:visible;padding:8px}
  .moderator-nav-title{display:none}
- .moderator-nav-item{white-space:nowrap}
+ .moderator-nav-item{white-space:nowrap;flex:1 1 calc(50% - 5px);min-width:140px}
+ .moderator-account{flex:1 1 100%;min-width:100%}
  .moderator-content{padding:15px}
 }
 @media(max-width:480px){
@@ -230,12 +231,12 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .app-shell:has(.map-page) .app-body{position:absolute;inset:0;overflow:hidden}
 .app-shell:has(.map-page) .app-sidebar{position:absolute;left:14px;top:76px;bottom:14px;height:auto;width:264px;flex-basis:264px;border:1px solid var(--glass-border);border-radius:18px;box-shadow:var(--shadow-lg);background:var(--glass-bg);backdrop-filter:blur(var(--glass-blur));-webkit-backdrop-filter:blur(var(--glass-blur))}
 .app-shell:has(.map-page) .app-sidebar.collapsed{width:72px;flex-basis:72px}
+.app-shell:has(.map-page) .app-sidebar.collapsed ~ .app-main .map-toolbar{left:calc(14px + 72px + 16px)}
+.app-shell:has(.map-page) .app-sidebar.collapsed ~ .app-main .status{left:calc(14px + 72px + 16px)}
 .app-shell:has(.map-page) .app-main{width:100%;height:100%;overflow:hidden}
 .app-shell:has(.map-page) .map-page{position:relative;width:100%;height:100%;padding:0;gap:0}
-.app-shell:has(.map-page) .map-toolbar{position:absolute;z-index:12;top:76px;left:294px;right:14px;min-height:54px;justify-content:flex-end;pointer-events:none}
+.app-shell:has(.map-page) .map-toolbar{position:absolute;z-index:12;top:76px;left:calc(14px + 264px + 16px);right:14px;min-height:54px;justify-content:flex-end;pointer-events:none}
 .app-shell:has(.map-page) .map-toolbar>*{pointer-events:auto}
-.app-shell:has(.map-page) .map-toolbar>div:first-child{margin-right:auto;padding:9px 13px;border:1px solid var(--glass-border);border-radius:13px;background:var(--glass-bg);backdrop-filter:blur(var(--glass-blur));-webkit-backdrop-filter:blur(var(--glass-blur));box-shadow:var(--shadow-sm)}
-.app-shell:has(.map-page) .map-toolbar h1{font-size:15px;letter-spacing:-.3px;margin-top:3px}
 .app-shell:has(.map-page) .map-toolbar-actions{padding:7px;border:1px solid var(--glass-border);border-radius:14px;background:var(--glass-bg);backdrop-filter:blur(var(--glass-blur));-webkit-backdrop-filter:blur(var(--glass-blur));box-shadow:var(--shadow-sm)}
 .app-shell:has(.map-page) .map-toolbar-actions select{background:var(--surface);min-width:150px}
 .app-shell:has(.map-page) .map-stage{position:absolute;inset:0;border:0;border-radius:0;box-shadow:none;overflow:hidden}
@@ -253,8 +254,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
  .app-shell:has(.map-page) .app-sidebar{position:fixed;left:10px;top:64px;bottom:10px;width:min(290px,calc(100vw - 40px));height:auto;transform:translateX(calc(-100% - 24px));border-radius:17px}
  .app-shell:has(.map-page) .app-sidebar.mobile-open{transform:translateX(0)}
  .app-shell:has(.map-page) .map-toolbar{top:64px;left:10px;right:10px;min-height:0;align-items:flex-end;gap:7px}
- .app-shell:has(.map-page) .map-toolbar>div:first-child{display:none}
- .app-shell:has(.map-page) .map-toolbar-actions{margin-left:auto;max-width:calc(100vw - 20px);gap:6px;padding:6px;border-radius:12px}
+  .app-shell:has(.map-page) .map-toolbar-actions{margin-left:auto;max-width:calc(100vw - 20px);gap:6px;padding:6px;border-radius:12px}
  .app-shell:has(.map-page) .map-toolbar-actions select{min-width:0;max-width:42vw;height:36px}
  .app-shell:has(.map-page) .map-toolbar-actions .button{min-height:36px;padding:0 10px;font-size:11px}
  .app-shell:has(.map-page) .status{top:112px;left:10px}
@@ -271,8 +271,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 
 /* Keep category filter and create action at opposite edges of the toolbar */
 .app-shell:has(.map-page) .map-toolbar{align-items:stretch;flex-direction:column;justify-content:flex-start;gap:7px}
-.app-shell:has(.map-page) .map-toolbar>div:first-child{align-self:flex-start;margin:0;padding:7px 11px}
-.app-shell:has(.map-page) .map-toolbar-actions{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0;border:0;border-radius:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none}
+.app-shell:has(.map-page) .map-toolbar-actions{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0;border:0;border-radius:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;flex:1;min-width:0}
 .app-shell:has(.map-page) .map-toolbar-actions select{flex:0 1 220px;max-width:45%;padding:0 34px 0 12px;border:1px solid var(--glass-border);border-radius:11px;background:var(--glass-bg);backdrop-filter:blur(var(--glass-blur));-webkit-backdrop-filter:blur(var(--glass-blur));box-shadow:var(--shadow-sm)}
 .app-shell:has(.map-page) .map-toolbar-actions .button{margin-left:auto;flex:none;box-shadow:var(--shadow-sm)}
 @media(max-width:720px){
