@@ -42,29 +42,56 @@ describe("auth store", () => {
   it("initializes an authenticated session", async () => {
     apiMock.mockResolvedValue({ id: "m1", username: "admin" });
     csrfMock.mockResolvedValue("csrf");
+
     await useAuthStore.getState().initialize();
+
     expect(useAuthStore.getState().status).toBe("authenticated");
     expect(useAuthStore.getState().moderator?.username).toBe("admin");
+    expect(setCsrfMock).toHaveBeenCalledWith("csrf");
   });
 
   it("initializes unauthenticated on 401", async () => {
     apiMock.mockRejectedValue(new ApiErrorMock(401, "unauthorized", "bad"));
+
     await useAuthStore.getState().initialize();
+
     expect(useAuthStore.getState().status).toBe("unauthenticated");
     expect(clearCsrfMock).toHaveBeenCalled();
   });
 
-  it("initializes error on server failure", async () => {
+  it("initializes error on server failure and preserves a server detail", async () => {
     apiMock.mockRejectedValue(new ApiErrorMock(500, "http_error", "down"));
+
     await useAuthStore.getState().initialize();
+
     expect(useAuthStore.getState().status).toBe("error");
-    expect(useAuthStore.getState().error).toContain("Не удалось");
+    expect(useAuthStore.getState().error).toBe("down");
+  });
+
+  it("initializes with a security error on 403", async () => {
+    apiMock.mockRejectedValue(new ApiErrorMock(403, "forbidden", "blocked"));
+
+    await useAuthStore.getState().initialize();
+
+    expect(useAuthStore.getState().status).toBe("error");
+    expect(useAuthStore.getState().error).toContain("Проверка безопасности");
+  });
+
+  it("initializes with a generic error for an unknown failure", async () => {
+    apiMock.mockRejectedValue(new Error("network down"));
+
+    await useAuthStore.getState().initialize();
+
+    expect(useAuthStore.getState().status).toBe("error");
+    expect(useAuthStore.getState().error).toContain("Не удалось связаться");
   });
 
   it("logs in and rotates csrf", async () => {
     csrfMock.mockResolvedValue("pre");
     apiMock.mockResolvedValue({ id: "m1", username: "admin", csrf_token: "post" });
+
     await useAuthStore.getState().login(" admin ", "password");
+
     expect(useAuthStore.getState().status).toBe("authenticated");
     expect(setCsrfMock).toHaveBeenCalledWith("post");
   });
@@ -72,20 +99,57 @@ describe("auth store", () => {
   it("maps login 401 and rethrows", async () => {
     csrfMock.mockResolvedValue("pre");
     apiMock.mockRejectedValue(new ApiErrorMock(401, "unauthorized", "bad"));
+
     await expect(useAuthStore.getState().login("admin", "bad")).rejects.toBeInstanceOf(ApiErrorMock);
+
     expect(useAuthStore.getState().error).toBe("Неверный логин или пароль.");
+    expect(useAuthStore.getState().status).toBe("unauthenticated");
+  });
+
+  it("maps login 403 and rethrows", async () => {
+    csrfMock.mockResolvedValue("pre");
+    apiMock.mockRejectedValue(new ApiErrorMock(403, "forbidden", "blocked"));
+
+    await expect(useAuthStore.getState().login("admin", "bad")).rejects.toBeInstanceOf(ApiErrorMock);
+
+    expect(useAuthStore.getState().error).toContain("Проверка безопасности");
+    expect(useAuthStore.getState().status).toBe("unauthenticated");
+  });
+
+  it("maps an unknown login failure to a generic error and rethrows", async () => {
+    csrfMock.mockResolvedValue("pre");
+    apiMock.mockRejectedValue(new Error("network down"));
+
+    await expect(useAuthStore.getState().login("admin", "bad")).rejects.toThrow("network down");
+
+    expect(useAuthStore.getState().error).toContain("Не удалось связаться");
+    expect(useAuthStore.getState().status).toBe("unauthenticated");
   });
 
   it("logs out successfully", async () => {
     apiMock.mockResolvedValue(undefined);
+
     await useAuthStore.getState().logout();
+
     expect(useAuthStore.getState().status).toBe("unauthenticated");
     expect(clearCsrfMock).toHaveBeenCalled();
   });
 
   it("treats logout 401 as an expired session", async () => {
     apiMock.mockRejectedValue(new ApiErrorMock(401, "unauthorized", "expired"));
+
     await expect(useAuthStore.getState().logout()).rejects.toBeInstanceOf(ApiErrorMock);
+
     expect(useAuthStore.getState().status).toBe("unauthenticated");
+    expect(clearCsrfMock).toHaveBeenCalled();
+  });
+
+  it("rethrows a non-401 logout failure without changing the session state", async () => {
+    apiMock.mockRejectedValue(new ApiErrorMock(500, "http_error", "down"));
+
+    await expect(useAuthStore.getState().logout()).rejects.toBeInstanceOf(ApiErrorMock);
+
+    expect(useAuthStore.getState().status).toBe("loading");
+    expect(clearCsrfMock).not.toHaveBeenCalled();
   });
 });
