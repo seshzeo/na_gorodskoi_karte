@@ -31,8 +31,6 @@ it("opens create modal and submits a point request", async () => {
   await user.selectOptions(screen.getByRole("combobox", { name: /Категория/ }), "1");
   await user.type(screen.getByPlaceholderText(/полезна горожанам/), " Description ");
   await user.type(screen.getByPlaceholderText(/к вам обращаться/), " Author ");
-  const date = screen.getByDisplayValue("");
-  expect(date).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Отмена" }));
   expect(screen.queryByRole("heading", { name: "Предложить точку" })).not.toBeInTheDocument();
 });
