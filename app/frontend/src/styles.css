@@ -267,3 +267,17 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
  .app-shell:has(.map-page) .map-toolbar-actions select{flex:1;max-width:none}
  .app-shell:has(.map-page) .header-actions{gap:5px}
 }
+
+
+/* Keep category filter and create action at opposite edges of the toolbar */
+.app-shell:has(.map-page) .map-toolbar{align-items:stretch;flex-direction:column;justify-content:flex-start;gap:7px}
+.app-shell:has(.map-page) .map-toolbar>div:first-child{align-self:flex-start;margin:0;padding:7px 11px}
+.app-shell:has(.map-page) .map-toolbar-actions{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0;border:0;border-radius:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none}
+.app-shell:has(.map-page) .map-toolbar-actions select{flex:0 1 220px;max-width:45%;padding:0 34px 0 12px;border:1px solid var(--glass-border);border-radius:11px;background:var(--glass-bg);backdrop-filter:blur(var(--glass-blur));-webkit-backdrop-filter:blur(var(--glass-blur));box-shadow:var(--shadow-sm)}
+.app-shell:has(.map-page) .map-toolbar-actions .button{margin-left:auto;flex:none;box-shadow:var(--shadow-sm)}
+@media(max-width:720px){
+ .app-shell:has(.map-page) .map-toolbar{flex-direction:row;align-items:center;justify-content:space-between;gap:8px}
+ .app-shell:has(.map-page) .map-toolbar-actions{width:100%;justify-content:space-between;gap:8px;padding:0;border:0;background:transparent;box-shadow:none}
+ .app-shell:has(.map-page) .map-toolbar-actions select{flex:0 1 48%;max-width:48%;height:36px}
+ .app-shell:has(.map-page) .map-toolbar-actions .button{margin-left:auto;flex:none}
+}
