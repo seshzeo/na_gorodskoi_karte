@@ -5,7 +5,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from app.backend.models.point import Point\nfrom app.backend.models.point_request import PointRequestStatus
+from app.backend.models.point import Point
+from app.backend.models.point_request import PointRequestStatus
 from app.backend.services import auth, catalog, point_requests, points
 from app.backend.services.errors import ConflictError, NotFoundError
 

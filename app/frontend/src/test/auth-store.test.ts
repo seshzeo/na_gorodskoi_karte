@@ -1,5 +1,7 @@
-import { describe, expect, it, beforeEach, vi } from "vitest";
-import { useAuthStore } from "../features/auth/model/authStore";
+﻿import { describe, expect, it, beforeEach, vi } from "vitest";
+import { AuthBootstrap, useAuthStore } from "../features/auth/model/authStore";
+import { render, waitFor } from "@testing-library/react";
+import { createElement } from "react";
 
 const { apiMock, csrfMock, setCsrfMock, clearCsrfMock, ApiErrorMock } = vi.hoisted(() => ({
   apiMock: vi.fn(),
@@ -152,4 +154,22 @@ describe("auth store", () => {
     expect(useAuthStore.getState().status).toBe("loading");
     expect(clearCsrfMock).not.toHaveBeenCalled();
   });
+});
+
+
+it("AuthBootstrap initializes the authentication store on mount", async () => {
+  apiMock.mockResolvedValue({ id: "m1", username: "admin" });
+  csrfMock.mockResolvedValue("csrf");
+
+  const { container } = render(createElement(AuthBootstrap));
+
+  expect(container).toBeEmptyDOMElement();
+
+  await waitFor(() => {
+    expect(useAuthStore.getState().status).toBe("authenticated");
+  });
+
+  expect(apiMock).toHaveBeenCalledWith("/auth/me");
+  expect(csrfMock).toHaveBeenCalled();
+  expect(setCsrfMock).toHaveBeenCalledWith("csrf");
 });

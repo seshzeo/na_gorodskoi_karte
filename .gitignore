@@ -8,7 +8,6 @@ venv/
 .ruff_cache/
 .idea/
 .vscode/
-.env
 .env.*
 !.env.example
 # Frontend
@@ -20,3 +19,11 @@ dist/
 coverage/
 .vitest/
 app/frontend/coverage/
+
+# Python coverage
+.coverage
+.coverage.*
+
+# Vite cache
+.vite/
+app/frontend/.vite/
