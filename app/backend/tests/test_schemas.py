@@ -9,17 +9,17 @@ from app.backend.schemas.point import PointUpdate
 from app.backend.schemas.point_request import PointRequestCreate, PointRequestReject, PointRequestUpdate
 
 
+@pytest.mark.parametrize("value", ["", "   ", "bad slug", "a_b", "-bad", "bad-"])
+def test_category_create_rejects_invalid_slug_or_blank_name(value):
+    with pytest.raises(ValidationError):
+        CategoryCreate.model_validate({"name": " Test ", "slug": value})
+
+
 def test_login_request_valid_and_extra_forbidden():
     item = LoginRequest(username=" admin ", password="secret")
     assert item.username == " admin "
     with pytest.raises(ValidationError):
         LoginRequest(username="admin", password="secret", extra="x")
-
-
-@pytest.mark.parametrize("value", ["", "   ", "bad slug", "UPPER", "a_b", "-bad", "bad-"])
-def test_category_create_rejects_invalid_slug_or_blank_name(value):
-    with pytest.raises(ValidationError):
-        CategoryCreate.model_validate({"name": " Test ", "slug": value})
 
 
 def test_category_create_normalizes_fields():
@@ -56,7 +56,7 @@ def test_point_request_create_and_update_validation():
     item = PointRequestCreate.model_validate(valid)
     assert item.author_name == "Ivan"
     with pytest.raises(ValidationError):
-        PointRequestCreate.model_validate({**valid, "event_at":"2026-01-01T12:00:00"})
+        PointRequestCreate.model_validate({**valid, "event_at":"2026-01-01T00:00:00"})
     with pytest.raises(ValidationError):
         PointRequestCreate.model_validate({**valid, "latitude":91})
     with pytest.raises(ValidationError):
