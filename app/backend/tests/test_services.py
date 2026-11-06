@@ -58,7 +58,7 @@ async def test_catalog_update_paths(monkeypatch):
 @pytest.mark.asyncio
 async def test_catalog_update_deactivate_conflicts(monkeypatch):
     category_obj = SimpleNamespace(id=1, name="Old", slug="old", is_active=True)
-    db = MagicMock(); db.scalar = AsyncMock(side_effect=[True]);
+    db = MagicMock(); db.scalar = AsyncMock(side_effect=[True, False]);
     monkeypatch.setattr(catalog, "get_category", AsyncMock(return_value=category_obj))
     monkeypatch.setattr(catalog, "get_category_by_name_or_slug", AsyncMock(return_value=None))
     with pytest.raises(ConflictError):
@@ -193,6 +193,7 @@ async def test_point_request_update_approve_reject(monkeypatch):
     monkeypatch.setattr(point_requests, "get_request", AsyncMock(return_value=request))
     monkeypatch.setattr(point_requests, "get_active_category", AsyncMock(return_value=SimpleNamespace(id=1)))
     monkeypatch.setattr(point_requests, "record_moderator_action", AsyncMock())
+    db.add.side_effect = lambda obj: setattr(obj, "id", 99)
     assert await point_requests.update_request(db,1,{"title":"New"},"m1") is request
     request.status = PointRequestStatus.APPROVED
     with pytest.raises(ConflictError): await point_requests.update_request(db,1,{"title":"x"},"m1")
@@ -239,7 +240,7 @@ async def test_auth_login_and_csrf_context(monkeypatch):
     monkeypatch.setattr(auth, "get_session_from_request", AsyncMock(return_value=session))
     monkeypatch.setattr(auth, "get_moderator_by_username", AsyncMock(return_value=moderator))
     monkeypatch.setattr(auth, "validate_csrf", AsyncMock())
-    monkeypatch.setattr(auth._password_hasher, "verify", lambda h,p: True)
+    monkeypatch.setattr(auth, "_password_hasher", SimpleNamespace(verify=lambda h, p: True))
     monkeypatch.setattr(auth, "_new_token", lambda: "token")
     request = MagicMock(); response = MagicMock()
     result, csrf = await auth.login(db,request,response,"admin","password","csrf")
