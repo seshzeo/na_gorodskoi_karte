@@ -21,7 +21,7 @@ it("shows login and submits credentials", async () => {
   const user = userEvent.setup();
   render(<ModeratorPage />);
   await user.type(screen.getByPlaceholderText("Логин модератора"), "admin");
-  await user.type(screen.getByPlaceholderText("Пароль модератора"), "password");
+  await user.type(screen.getByPlaceholderText("Пароль"), "password");
   await user.click(screen.getByRole("button", { name: "Войти" }));
   expect(auth.login).toHaveBeenCalledWith("admin", "password");
 });
