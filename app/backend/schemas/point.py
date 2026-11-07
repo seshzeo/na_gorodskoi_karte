@@ -110,7 +110,7 @@ class PointUpdate(BaseModel):
         if not self.model_fields_set:
             raise ValueError("At least one field must be provided")
         for field in self.model_fields_set:
-            if getattr(self, field) is None and field != "event_at":
+            if getattr(self, field) is None:
                 raise ValueError(f"{field} cannot be null")
         if (self.latitude is None) != (self.longitude is None):
             raise ValueError("latitude and longitude must be supplied together")
