@@ -244,7 +244,7 @@ it("does not select a marker missing from the current points data", async () => 
     get: (key: string) => key === "pointId" ? 999 : undefined,
   };
 
-  ol.maps[0].emit("singleclick", { pixel: [10, 20] });
+  ol.maps[0].emit("singleclick", { pixel: [10, 20], coordinate: [46.034, 51.533] });
 
   expect(onSelect).not.toHaveBeenCalled();
 });
