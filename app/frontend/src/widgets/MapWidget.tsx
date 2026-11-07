@@ -12,7 +12,7 @@ export function MapWidget({categoryId,city,onSelect,onMapClick}:{categoryId?:num
   const instance=new Map({target:el.current,layers:[new TileLayer({source:new OSM(),className:"base-map-layer"})],view:new View({center:fromLonLat([city.longitude,city.latitude]),zoom:12})});
   const update=()=>{const size=instance.getSize();if(!size)return;const extent=instance.getView().calculateExtent(size);const southwest=toLonLat([extent[0],extent[1]]);const northeast=toLonLat([extent[2],extent[3]]);setBbox([southwest[0],southwest[1],northeast[0],northeast[1]].join(","));};
   instance.on("moveend",update);map.current=instance;update();
-  return()=>{instance.setTarget(undefined);map.current=null;};
+  return()=>{instance.un("moveend",update);instance.setTarget(undefined);map.current=null;};
  },[]);
  useEffect(()=>{const instance=map.current;if(!instance)return;instance.getView().animate({center:fromLonLat([city.longitude,city.latitude]),zoom:12,duration:350});},[city.id,city.latitude,city.longitude]);
  const query=usePoints(bbox,categoryId);
