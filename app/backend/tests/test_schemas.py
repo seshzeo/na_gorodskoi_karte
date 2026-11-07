@@ -5,7 +5,7 @@ from pydantic import ValidationError
 
 from app.backend.schemas.auth import LoginRequest
 from app.backend.schemas.category import CategoryCreate, CategoryUpdate
-from app.backend.schemas.point import PointUpdate
+from app.backend.schemas.point import PointCreate, PointUpdate
 from app.backend.schemas.point_request import PointRequestCreate, PointRequestReject, PointRequestUpdate
 
 
@@ -47,7 +47,7 @@ def test_point_update_validates_coordinates_and_timezone():
         PointUpdate(latitude=51.5)
     with pytest.raises(ValidationError):
         PointUpdate(event_at=datetime(2026, 1, 1))
-    item = PointUpdate(title="  Event ", latitude=51.5, longitude=46.0, event_at=datetime(2026, 1, 1, tzinfo=timezone.utc))
+    item = PointUpdate(title="  Event ", latitude=51.5, longitude=46.0, event_at=datetime(2099, 1, 1, tzinfo=timezone.utc))
     assert item.title == "Event"
 
 
@@ -73,6 +73,14 @@ def test_point_request_reject_normalizes_and_validates():
     assert PointRequestReject(reason="  reason  ").reason == "reason"
     with pytest.raises(ValidationError):
         PointRequestReject(reason=" ")
+
+
+def test_permanent_place_schema_allows_missing_date():
+    item = PointCreate(
+        title="Park", description="Always open", category_id=1,
+        latitude=51.5, longitude=46.0, point_type="permanent",
+    )
+    assert item.event_at is None
 
 
 def test_orm_schema_serializes_attributes():
