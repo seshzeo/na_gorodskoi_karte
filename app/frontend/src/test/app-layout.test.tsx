@@ -1,10 +1,14 @@
-import { expect, it } from "vitest";
+import { beforeEach, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { ThemeProvider } from "../shared/theme/ThemeProvider";
 import { CityProvider } from "../shared/city/CityProvider";
 import { AppLayout } from "../widgets/AppLayout";
+
+beforeEach(() => {
+  localStorage.clear();
+});
 
 it("renders navigation and toggles sidebar and theme", async () => {
   const user = userEvent.setup();
