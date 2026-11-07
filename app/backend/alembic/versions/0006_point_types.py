@@ -23,5 +23,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index("ix_points_type_active", table_name="points")
+    op.execute("UPDATE points SET event_at = created_at WHERE event_at IS NULL")
     op.alter_column("points", "event_at", existing_type=sa.DateTime(timezone=True), nullable=False)
     op.drop_column("points", "point_type")
