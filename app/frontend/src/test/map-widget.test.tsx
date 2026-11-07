@@ -1,4 +1,4 @@
-﻿import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MapWidget } from "../widgets/MapWidget";
 
@@ -28,10 +28,9 @@ vi.mock("ol/Map", () => ({
       ol.maps.push(this);
     }
 
+    view = { calculateExtent: () => [1, 2, 3, 4], animate: vi.fn() };
     getSize() { return this.size; }
-    getView() {
-      return { calculateExtent: () => [1, 2, 3, 4] };
-    }
+    getView() { return this.view; }
     on(event: string, callback: Function) {
       this.handlers.set(event, [...(this.handlers.get(event) ?? []), callback]);
     }
@@ -120,6 +119,8 @@ vi.mock("ol/proj", () => ({
   toLonLat: (coordinates: number[]) => coordinates,
 }));
 
+const city = { id: "balakovo", name: "Балаково", latitude: 52.033, longitude: 47.783 };
+
 const point = {
   id: 7,
   title: "Городское событие",
@@ -151,7 +152,7 @@ describe("MapWidget", () => {
     const onSelect = vi.fn();
 
     const { container, unmount } = render(
-      <MapWidget categoryId={3} onSelect={onSelect} />,
+      <MapWidget categoryId={3} city={city} onSelect={onSelect} onMapClick={vi.fn()} />,
     );
 
     await waitFor(() => {
@@ -181,7 +182,7 @@ describe("MapWidget", () => {
       isError: true,
     });
 
-    const { container } = render(<MapWidget onSelect={vi.fn()} />);
+    const { container } = render(<MapWidget city={city} onSelect={vi.fn()} onMapClick={vi.fn()} />);
 
     expect(container.querySelector(".status")).toBeInTheDocument();
     expect(container.querySelector(".status.error")).toBeInTheDocument();
@@ -202,7 +203,7 @@ describe("MapWidget", () => {
   it("does not select anything when a click misses all markers", async () => {
     const onSelect = vi.fn();
 
-    render(<MapWidget onSelect={onSelect} />);
+    render(<MapWidget city={city} onSelect={onSelect} onMapClick={vi.fn()} />);
 
     await waitFor(() => expect(ol.features).toHaveLength(1));
 
