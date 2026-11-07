@@ -83,6 +83,8 @@ async def test_points_routes_and_validation(client, monkeypatch):
     monkeypatch.setattr(points,"create_point",AsyncMock(return_value=row))
     created=await client.post("/api/v1/moderator/points",json={"title":"Park","description":"Permanent place","category_id":1,"latitude":51.5,"longitude":46.0,"point_type":"permanent"})
     assert created.status_code==201 and created.json()["point_type"]=="event"
+    points.create_point.assert_awaited_once()
+    assert points.create_point.await_args.args[1]["point_type"]=="permanent"
     monkeypatch.setattr(points,"fetch_points",AsyncMock(return_value={"rows":[row],"total":1}))
     response=await client.get("/api/v1/points?bbox=45,50,47,52&category_id=1&category_id=1")
     assert response.status_code==200 and response.json()["items"][0]["category_name"]=="P"
@@ -98,7 +100,7 @@ async def test_points_routes_and_validation(client, monkeypatch):
 async def test_point_mutations_and_moderator_routes(client, monkeypatch):
     from app.backend.routers import points
     from app.backend.services.errors import ConflictError, NotFoundError
-    row=(SimpleNamespace(id=1,title="T",description="D",category_id=1,category=SimpleNamespace(name="P"),event_at=datetime.now(timezone.utc),author_name="A",created_at=datetime.now(timezone.utc),updated_at=datetime.now(timezone.utc),is_active=True),46.0,51.5)
+    row=(SimpleNamespace(id=1,title="T",description="D",category_id=1,category=SimpleNamespace(name="P"),event_at=datetime.now(timezone.utc),point_type="event",author_name="A",created_at=datetime.now(timezone.utc),updated_at=datetime.now(timezone.utc),is_active=True),46.0,51.5)
     monkeypatch.setattr(points,"update_point",AsyncMock(return_value=row))
     assert (await client.patch("/api/v1/points/1",json={"title":"N"})).status_code==200
     monkeypatch.setattr(points,"update_point",AsyncMock(side_effect=NotFoundError("missing")))
