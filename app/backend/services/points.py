@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.backend.models.point import Point
 from app.backend.repositories.category import get_active_category
 from app.backend.repositories.points import (
     get_point, list_moderator_points, list_points, make_location, nearby_points,
@@ -29,6 +30,31 @@ async def fetch_point(db: AsyncSession, point_id: int, *, include_archived: bool
     return result
 
 
+async def create_point(db: AsyncSession, payload: dict, moderator_id: str):
+    category = await get_active_category(db, payload["category_id"])
+    if category is None:
+        raise NotFoundError("Active category not found")
+    point = Point(
+        title=payload["title"],
+        description=payload["description"],
+        category_id=payload["category_id"],
+        location=make_location(payload["latitude"], payload["longitude"]),
+        point_type=payload["point_type"],
+        event_at=payload.get("event_at"),
+        author_name=payload["author_name"],
+        is_active=True,
+    )
+    db.add(point)
+    await db.flush()
+    await record_moderator_action(
+        db, moderator_id=moderator_id, action="point.created",
+        object_type="point", object_id=point.id,
+        details={"point_type": point.point_type},
+    )
+    await db.commit()
+    return await fetch_point(db, point.id, include_archived=True)
+
+
 async def update_point(
     db: AsyncSession, point_id: int, changes: dict, moderator_id: str, *, include_archived: bool = False
 ):
@@ -51,8 +77,6 @@ async def update_point(
         details={"changed_fields": changed_fields},
     )
     await db.commit()
-    # Another moderator may archive the point immediately after this transaction.
-    # Return the committed row even if its active flag changed concurrently.
     return await fetch_point(db, point_id, include_archived=True)
 
 
@@ -85,5 +109,4 @@ async def restore_point(db: AsyncSession, point_id: int, moderator_id: str):
         object_type="point", object_id=point_id,
     )
     await db.commit()
-    # Keep the response valid if a concurrent archive happens after restoration.
     return await fetch_point(db, point_id, include_archived=True)
