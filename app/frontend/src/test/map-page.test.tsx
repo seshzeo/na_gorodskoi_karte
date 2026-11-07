@@ -55,8 +55,8 @@ it("submits a complete point request and closes the modal after success", async 
       title: "Festival",
       description: "Description",
       category_id: 1,
-      latitude: 51.533,
-      longitude: 46.034,
+      latitude: 52.033,
+      longitude: 47.783,
       event_at: new Date("2026-11-01T12:00").toISOString(),
     }),
   });
