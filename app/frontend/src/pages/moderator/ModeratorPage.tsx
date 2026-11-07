@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCategories } from "../../entities/category/model/useCategories";
 import { useModeratePointRequest, usePointRequests, type RequestFilter } from "../../features/moderation/model/usePointRequests";
 import { ApiError } from "../../shared/api";
 import { useAuthStore } from "../../features/auth/model/authStore";
-import type { PointRequestRead } from "../../entities";
+import type { Category, Point, PointRequestRead } from "../../entities";
+import { api } from "../../shared/api";
 
 const filters: { value: RequestFilter; label: string }[] = [
   { value: "pending", label: "Новые" },
@@ -43,6 +45,7 @@ export function ModeratorPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [showPermanentForm, setShowPermanentForm] = useState(false);
 
   const requestsQuery = usePointRequests(filter);
   const categoriesQuery = useCategories();
@@ -158,7 +161,7 @@ export function ModeratorPage() {
             <div className="moderator-nav-title">Рабочая область</div>
             <div className="moderator-nav-items">
               <div className="moderator-nav-item active">▤ <span>Заявки</span></div>
-              <div className="moderator-nav-item disabled">⌖ <span>Опубликованные точки</span><small>Скоро</small></div>
+              <button type="button" className="moderator-nav-item" onClick={() => setShowPermanentForm((value) => !value)}>⌖ <span>Постоянные места</span></button>
               <div className="moderator-nav-item disabled">◇ <span>Категории</span><small>Скоро</small></div>
             </div>
             <div className="moderator-account">
@@ -271,5 +274,86 @@ export function ModeratorPage() {
         </div>
       )}
     </section>
+  );
+}
+
+
+function CreatePermanentPlaceForm({
+  categories,
+  authorName,
+  onCreated,
+}: {
+  categories: Category[];
+  authorName: string;
+  onCreated: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    category_id: "",
+    latitude: "",
+    longitude: "",
+  });
+  const mutation = useMutation({
+    mutationFn: () => api<Point>("/moderator/points", {
+      method: "POST",
+      body: JSON.stringify({
+        title: form.title.trim(),
+        description: form.description.trim(),
+        category_id: Number(form.category_id),
+        latitude: Number(form.latitude),
+        longitude: Number(form.longitude),
+        point_type: "permanent",
+        event_at: null,
+        author_name: authorName,
+      }),
+    }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["points"] });
+      setForm({ title: "", description: "", category_id: "", latitude: "", longitude: "" });
+      onCreated();
+    },
+  });
+
+  return (
+    <form className="auth-panel" onSubmit={(event) => { event.preventDefault(); mutation.mutate(); }}>
+      <div className="auth-panel-heading">
+        <span className="page-kicker">Публикация модератора</span>
+        <h2>Новое постоянное место</h2>
+        <p>Для постоянных мест дата и время не указываются.</p>
+      </div>
+      <div className="form-grid">
+        <label className="form-field">
+          <span>Название</span>
+          <input required maxLength={200} value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
+        </label>
+        <label className="form-field">
+          <span>Категория</span>
+          <select required value={form.category_id} onChange={(event) => setForm((current) => ({ ...current, category_id: event.target.value }))}>
+            <option value="">Выберите категорию</option>
+            {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+          </select>
+        </label>
+        <label className="form-field form-field-wide">
+          <span>Описание</span>
+          <textarea required maxLength={5000} value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
+        </label>
+        <label className="form-field">
+          <span>Широта</span>
+          <input required type="number" min="-90" max="90" step="any" value={form.latitude} onChange={(event) => setForm((current) => ({ ...current, latitude: event.target.value }))} />
+        </label>
+        <label className="form-field">
+          <span>Долгота</span>
+          <input required type="number" min="-180" max="180" step="any" value={form.longitude} onChange={(event) => setForm((current) => ({ ...current, longitude: event.target.value }))} />
+        </label>
+      </div>
+      {mutation.isError && <p className="form-error" role="alert">Не удалось создать место. Проверьте данные и повторите попытку.</p>}
+      <div className="dialog-footer">
+        <button type="submit" className="button button-primary" disabled={mutation.isPending || !form.category_id}>
+          {mutation.isPending ? "Сохраняем…" : "Опубликовать место"}
+        </button>
+      </div>
+    </form>
   );
 }
