@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 
 from geoalchemy2 import Geography
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.backend.models.base import Base
@@ -15,6 +15,11 @@ class Point(Base):
         Index("ix_points_event_at", "event_at"),
         Index("ix_points_category_id", "category_id"),
         Index("ix_points_type_active", "point_type", "is_active"),
+        CheckConstraint(
+            "(point_type = 'event' AND event_at IS NOT NULL) OR "
+            "(point_type = 'permanent' AND event_at IS NULL)",
+            name="ck_points_type_event_at",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
