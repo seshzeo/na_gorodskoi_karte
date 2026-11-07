@@ -40,10 +40,10 @@ it("submits a complete point request and closes the modal after success", async 
   await user.click(screen.getByRole("button", { name: /Добавить точку/ }));
   expect(screen.getByRole("heading", { name: "Предложить точку" })).toBeInTheDocument();
 
-  await user.type(screen.getByPlaceholderText("Например, городской фестиваль"), "Festival");
+  await user.type(screen.getByPlaceholderText("Например, городское событие"), "Festival");
   await user.selectOptions(screen.getByRole("combobox", { name: /Категория/ }), "1");
   await user.type(screen.getByPlaceholderText(/Расскажите, почему/), "Description");
-  await user.type(screen.getByLabelText(/Дата и время события/), "2026-12-01T12:00");
+  fireEvent.change(screen.getByLabelText(/Дата и время события/), { target: { value: "2026-11-01T12:00" } });
   await user.type(screen.getByPlaceholderText("Как к вам обращаться"), "Author");
   await user.click(screen.getByRole("button", { name: "Отправить заявку" }));
 
@@ -57,7 +57,7 @@ it("submits a complete point request and closes the modal after success", async 
       category_id: 1,
       latitude: 51.533,
       longitude: 46.034,
-      event_at: new Date("2026-12-01T12:00").toISOString(),
+      event_at: new Date("2026-11-01T12:00").toISOString(),
     }),
   });
   await waitFor(() => expect(screen.queryByRole("heading", { name: "Предложить точку" })).not.toBeInTheDocument());
@@ -74,10 +74,10 @@ it("shows selected point card and closes it", async () => {
 
 
 async function fillRequestForm(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(screen.getByPlaceholderText("Например, городской фестиваль"), "Festival");
+  await user.type(screen.getByPlaceholderText("Например, городское событие"), "Festival");
   await user.selectOptions(screen.getByRole("combobox", { name: /Категория/ }), "1");
   await user.type(screen.getByPlaceholderText(/Расскажите, почему/), "Description");
-  await user.type(screen.getByLabelText(/Дата и время события/), "2026-12-01T12:00");
+  fireEvent.change(screen.getByLabelText(/Дата и время события/), { target: { value: "2026-11-01T12:00" } });
   await user.type(screen.getByPlaceholderText("Как к вам обращаться"), "Author");
 }
 
