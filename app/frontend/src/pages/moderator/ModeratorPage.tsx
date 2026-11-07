@@ -5,6 +5,7 @@ import { useModeratePointRequest, usePointRequests, type RequestFilter } from ".
 import { ApiError } from "../../shared/api";
 import { useAuthStore } from "../../features/auth/model/authStore";
 import type { Category, Point, PointRequestRead } from "../../entities";
+import { ModeratorPointsPanel } from "./ModeratorPointsPanel";
 import { api } from "../../shared/api";
 
 const filters: { value: RequestFilter; label: string }[] = [
@@ -46,6 +47,7 @@ export function ModeratorPage() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
   const [showPermanentForm, setShowPermanentForm] = useState(false);
+  const [showPointsPanel, setShowPointsPanel] = useState(false);
 
   const requestsQuery = usePointRequests(filter);
   const categoriesQuery = useCategories();
@@ -161,7 +163,7 @@ export function ModeratorPage() {
             <div className="moderator-nav-title">Рабочая область</div>
             <div className="moderator-nav-items">
               <div className="moderator-nav-item active">▤ <span>Заявки</span></div>
-              <button type="button" className="moderator-nav-item" onClick={() => setShowPermanentForm((value) => !value)}>⌖ <span>Постоянные места</span></button>
+              <button type="button" className="moderator-nav-item" onClick={() => setShowPointsPanel((value) => !value)}>⌖ <span>Опубликованные точки</span></button>
               <div className="moderator-nav-item disabled">◇ <span>Категории</span><small>Скоро</small></div>
             </div>
             <div className="moderator-account">
