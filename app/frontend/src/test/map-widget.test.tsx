@@ -208,7 +208,7 @@ describe("MapWidget", () => {
     await waitFor(() => expect(ol.features).toHaveLength(1));
 
     ol.maps[0].featureAtPixel = null;
-    ol.maps[0].emit("singleclick", { pixel: [0, 0] });
+    ol.maps[0].emit("singleclick", { pixel: [0, 0], coordinate: [46.034, 51.533] });
 
     expect(onSelect).not.toHaveBeenCalled();
   });
