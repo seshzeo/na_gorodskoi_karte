@@ -335,3 +335,37 @@ async def test_reject_request_persists_reason_and_audit(monkeypatch):
     audit.assert_awaited_once()
     assert audit.await_args.kwargs["action"] == "request.rejected"
     assert audit.await_args.kwargs["details"] == {"reason": "Not relevant"}
+
+
+@pytest.mark.asyncio
+async def test_create_permanent_point_records_moderator_action(monkeypatch):
+    db = MagicMock()
+    db.add = MagicMock()
+    db.flush = AsyncMock()
+    db.commit = AsyncMock()
+    point = SimpleNamespace(id=77, point_type="permanent")
+    monkeypatch.setattr(points, "get_active_category", AsyncMock(return_value=SimpleNamespace(id=1)))
+    monkeypatch.setattr(points, "make_location", lambda latitude, longitude: (latitude, longitude))
+    monkeypatch.setattr(points, "record_moderator_action", AsyncMock())
+    monkeypatch.setattr(points, "fetch_point", AsyncMock(return_value=(point, 46.0, 51.5)))
+
+    result = await points.create_point(
+        db,
+        {
+            "title": "City park",
+            "description": "Permanent place",
+            "category_id": 1,
+            "latitude": 51.5,
+            "longitude": 46.0,
+            "point_type": "permanent",
+            "event_at": None,
+            "author_name": "Moderator",
+        },
+        "moderator-1",
+    )
+
+    created = db.add.call_args.args[0]
+    assert created.point_type == "permanent"
+    assert created.event_at is None
+    assert result[0] is point
+    db.commit.assert_awaited_once()
