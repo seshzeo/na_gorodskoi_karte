@@ -80,6 +80,9 @@ async def test_auth_routes(client, test_app, monkeypatch):
 async def test_points_routes_and_validation(client, monkeypatch):
     from app.backend.routers import points
     row=(SimpleNamespace(id=1,title="T",description="D",category_id=1,category=SimpleNamespace(name="P"),event_at=datetime.now(timezone.utc),point_type="event",author_name="A",created_at=datetime.now(timezone.utc),updated_at=datetime.now(timezone.utc),is_active=True),46.0,51.5)
+    monkeypatch.setattr(points,"create_point",AsyncMock(return_value=row))
+    created=await client.post("/api/v1/moderator/points",json={"title":"Park","description":"Permanent place","category_id":1,"latitude":51.5,"longitude":46.0,"point_type":"permanent"})
+    assert created.status_code==201 and created.json()["point_type"]=="event"
     monkeypatch.setattr(points,"fetch_points",AsyncMock(return_value={"rows":[row],"total":1}))
     response=await client.get("/api/v1/points?bbox=45,50,47,52&category_id=1&category_id=1")
     assert response.status_code==200 and response.json()["items"][0]["category_name"]=="P"
