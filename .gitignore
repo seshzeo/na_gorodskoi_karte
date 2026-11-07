@@ -1,17 +1,28 @@
+# Python
 __pycache__/
 *.py[cod]
 .venv/
 venv/
-.env
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-.idea/
-.vscode/
+
+# Environment
 .env
 .env.*
 !.env.example
-# Frontend
+
+# IDE
+.idea/
+.vscode/
+
+# Node.js / frontend
 node_modules/
 dist/
 *.tsbuildinfo
+app/frontend/coverage/
+app/frontend/.vite/
+
+# Local backup files
+*.bak
+*.bak-*
