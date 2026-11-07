@@ -12,7 +12,7 @@ export function MapPage(){
   </div>
   <div className="map-stage"><MapWidget categoryId={cat} city={city} onSelect={point=>{setOpen(false);setSelected(point);}} onMapClick={openCreate}/>
    {selected&&<aside className="point-card" aria-label="Выбранная точка"><div className="point-card-head"><span className="category-chip">{selected.category_name}</span><button className="icon-button close-card" onClick={()=>setSelected(undefined)} aria-label="Закрыть карточку">×</button></div>
-    <h2>{selected.title}</h2><div className="point-date">◷ {new Intl.DateTimeFormat("ru-RU",{dateStyle:"medium",timeStyle:"short"}).format(new Date(selected.event_at))}</div><p>{selected.description}</p><div className="point-author">Добавил: {selected.author_name}</div>
+    <h2>{selected.title}</h2><div className="point-date">{selected.point_type === "permanent" ? "Постоянно" : selected.event_at ? `◷ ${new Intl.DateTimeFormat("ru-RU",{dateStyle:"medium",timeStyle:"short"}).format(new Date(selected.event_at))}` : ""}</div><p>{selected.description}</p><div className="point-author">Добавил: {selected.author_name}</div>
    </aside>}
   </div>
   {open&&<CreateModal key={`${initialCoordinates?.latitude},${initialCoordinates?.longitude}`} categories={categories.data??[]} initialCoordinates={initialCoordinates??city} onClose={()=>setOpen(false)}/>}
@@ -33,7 +33,7 @@ function CreateModal({categories,initialCoordinates,onClose}:{categories:Categor
     <label className="form-field"><span>Широта</span><input required type="number" min="-90" max="90" step="any" value={f.latitude} onChange={e=>set("latitude",e.target.value)}/></label>
     <label className="form-field"><span>Долгота</span><input required type="number" min="-180" max="180" step="any" value={f.longitude} onChange={e=>set("longitude",e.target.value)}/></label>
    </div><small className="field-hint">Координаты автоматически заполнены по выбранному месту на карте. Их можно уточнить вручную.</small></div>
-   <label className="form-field"><span>Дата и время события <b>*</b></span><input required type="datetime-local" max={new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)} value={f.event_at} onChange={e=>set("event_at",e.target.value)}/><small className="field-hint">Указывайте только дату и время уже прошедшего события.</small></label>
+   <label className="form-field"><span>Дата и время события <b>*</b></span><input required type="datetime-local" value={f.event_at} onChange={e=>set("event_at",e.target.value)}/><small className="field-hint">Укажите дату и время начала события. Можно выбрать прошедшую или будущую дату.</small></label>
    <label className="form-field"><span>Ваше имя <b>*</b></span><input required maxLength={120} value={f.author_name} onChange={e=>set("author_name",e.target.value)} placeholder="Как к вам обращаться"/></label>
   </div>
   {error&&<div className="form-error" role="alert">{error}</div>}
