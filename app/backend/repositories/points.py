@@ -73,7 +73,7 @@ async def list_points(
     query = _apply_point_filters(
         _point_query().where(Point.is_active.is_(True)), **filters
     )
-    query = query.order_by(Point.event_at.asc(), Point.id.asc()).limit(limit).offset(offset)
+    query = query.order_by(Point.event_at.asc().nulls_last(), Point.id.asc()).limit(limit).offset(offset)
     result = await db.execute(query)
     return result.all(), int(total or 0)
 
@@ -102,7 +102,7 @@ async def list_moderator_points(
 
     count_query = select(Point.id).where(*filters)
     total = await db.scalar(select(func.count()).select_from(count_query.subquery()))
-    query = _point_query().where(*filters).order_by(Point.event_at.asc(), Point.id.asc())
+    query = _point_query().where(*filters).order_by(Point.event_at.asc().nulls_last(), Point.id.asc())
     result = await db.execute(query.limit(limit).offset(offset))
     return result.all(), int(total or 0)
 
