@@ -24,7 +24,8 @@ export type Point = {
   category_name: string;
   latitude: number;
   longitude: number;
-  event_at: string;
+  point_type: "event" | "permanent";
+  event_at: string | null;
   author_name: string;
   created_at: string;
   updated_at: string;
