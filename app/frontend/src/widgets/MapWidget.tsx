@@ -21,9 +21,10 @@ export function MapWidget({categoryId,city,onSelect,onMapClick}:{categoryId?:num
   const source=new VectorSource();
   const layer=new VectorLayer({source,style:feature=>{
    const category=String(feature?.get("categoryName")??"");
-   return new Style({image:new CircleStyle({radius:8,fill:new Fill({color:CATEGORY_COLORS[category]??"#64748b"}),stroke:new Stroke({color:"#ffffff",width:2})})});
+   const permanent=feature?.get("pointType")==="permanent";
+   return new Style({image:new CircleStyle({radius:permanent?10:8,fill:new Fill({color:permanent?"#16856b":CATEGORY_COLORS[category]??"#64748b"}),stroke:new Stroke({color:"#ffffff",width:2})})});
   }});
-  (query.data??[]).forEach(point=>source.addFeature(new Feature({geometry:new PointGeom(fromLonLat([point.longitude,point.latitude])),pointId:point.id,categoryName:point.category_name})));
+  (query.data??[]).forEach(point=>source.addFeature(new Feature({geometry:new PointGeom(fromLonLat([point.longitude,point.latitude])),pointId:point.id,categoryName:point.category_name,pointType:point.point_type})));
   const click=(event:any)=>{
    const hit=instance.forEachFeatureAtPixel(event.pixel,feature=>feature);
    if(hit){const point=(query.data??[]).find(item=>item.id===hit.get("pointId"));if(point)onSelect(point);return;}
