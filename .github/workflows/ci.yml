@@ -35,7 +35,7 @@ jobs:
         run: python -m pip install -r app/backend/requirements-dev.txt
 
       - name: Run backend tests
-        run: python -m pytest app/backend/tests -q
+        run: python -m pytest app/backend/tests -q --cov=app.backend --cov-report=term-missing --cov-fail-under=80
 
   frontend:
     name: Frontend tests and build
