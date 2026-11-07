@@ -1,13 +1,14 @@
-﻿import { expect, it } from "vitest";
+import { expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { ThemeProvider } from "../shared/theme/ThemeProvider";
+import { CityProvider } from "../shared/city/CityProvider";
 import { AppLayout } from "../widgets/AppLayout";
 
 it("renders navigation and toggles sidebar and theme", async () => {
   const user = userEvent.setup();
-  render(<MemoryRouter><ThemeProvider><AppLayout /></ThemeProvider></MemoryRouter>);
+  render(<MemoryRouter><CityProvider><ThemeProvider><AppLayout /></ThemeProvider></CityProvider></MemoryRouter>);
   expect(screen.getByText("На городской карте")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /Карта/ })).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Свернуть меню" }));
@@ -24,9 +25,9 @@ it("cycles through all theme modes", async () => {
 
   render(
     <MemoryRouter>
-      <ThemeProvider>
+      <CityProvider><ThemeProvider>
         <AppLayout />
-      </ThemeProvider>
+      </ThemeProvider></CityProvider>
     </MemoryRouter>,
   );
 
@@ -52,9 +53,9 @@ it("closes mobile navigation through backdrop and close button", async () => {
 
   const { container } = render(
     <MemoryRouter>
-      <ThemeProvider>
+      <CityProvider><ThemeProvider>
         <AppLayout />
-      </ThemeProvider>
+      </ThemeProvider></CityProvider>
     </MemoryRouter>,
   );
 
@@ -81,9 +82,9 @@ it("closes mobile navigation after selecting a route or the brand", async () => 
 
   const { container } = render(
     <MemoryRouter>
-      <ThemeProvider>
+      <CityProvider><ThemeProvider>
         <AppLayout />
-      </ThemeProvider>
+      </ThemeProvider></CityProvider>
     </MemoryRouter>,
   );
 
@@ -103,9 +104,9 @@ it("can collapse and expand the sidebar repeatedly", async () => {
 
   const { container } = render(
     <MemoryRouter>
-      <ThemeProvider>
+      <CityProvider><ThemeProvider>
         <AppLayout />
-      </ThemeProvider>
+      </ThemeProvider></CityProvider>
     </MemoryRouter>,
   );
 
