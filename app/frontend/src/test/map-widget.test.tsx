@@ -191,7 +191,7 @@ describe("MapWidget", () => {
   });
 
   it("handles a map without a measurable size", async () => {
-    render(<MapWidget onSelect={vi.fn()} />);
+    render(<MapWidget city={city} onSelect={vi.fn()} onMapClick={vi.fn()} />);
 
     const map = ol.maps[0];
     map.size = undefined;
@@ -219,7 +219,7 @@ it("removes the moveend handler on unmount", () => {
   ol.maps.length = 0;
   ol.features.length = 0;
   ol.usePointsMock.mockReturnValue({ data: [point], isFetching: false, isError: false });
-  const { unmount } = render(<MapWidget onSelect={vi.fn()} />);
+  const { unmount } = render(<MapWidget city={city} onSelect={vi.fn()} onMapClick={vi.fn()} />);
   const map = ol.maps[0];
 
   expect(map.handlers.get("moveend")).toHaveLength(1);
@@ -236,7 +236,7 @@ it("does not select a marker missing from the current points data", async () => 
   ol.usePointsMock.mockReturnValue({ data: [point], isFetching: false, isError: false });
   const onSelect = vi.fn();
 
-  render(<MapWidget onSelect={onSelect} />);
+  render(<MapWidget city={city} onSelect={onSelect} onMapClick={vi.fn()} />);
 
   await waitFor(() => expect(ol.features).toHaveLength(1));
 
