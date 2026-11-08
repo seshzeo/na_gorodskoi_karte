@@ -1,13 +1,13 @@
 """Add permanent map places.
 
-Revision ID: 0006_point_types
-Revises: 0005_moderator_audit_log
+Revision ID: 0007_point_types
+Revises: 0006_historical_demo_catalog
 """
 from alembic import op
 import sqlalchemy as sa
 
-revision = "0006_point_types"
-down_revision = "0005_moderator_audit_log"
+revision = "0007_point_types"
+down_revision = "0006_historical_demo_catalog"
 branch_labels = None
 depends_on = None
 
@@ -28,8 +28,15 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    has_non_event_points = op.get_bind().execute(
+        sa.text("SELECT EXISTS (SELECT 1 FROM points WHERE point_type != 'event')")
+    ).scalar_one()
+    if has_non_event_points:
+        raise RuntimeError(
+            "Cannot downgrade point types while points with a non-event type exist."
+        )
+
     op.drop_constraint("ck_points_type_event_at", "points", type_="check")
     op.drop_index("ix_points_type_active", table_name="points")
-    op.execute("UPDATE points SET event_at = created_at WHERE event_at IS NULL")
     op.alter_column("points", "event_at", existing_type=sa.DateTime(timezone=True), nullable=False)
     op.drop_column("points", "point_type")
