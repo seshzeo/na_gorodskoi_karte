@@ -32,7 +32,8 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/user-event": "^14.6.1",
-    "jsdom": "^26.1.0"
+    "jsdom": "^26.1.0",
+    "vite-plugin-pwa": "1.1.0"
   },
   "allowScripts": {
     "esbuild@0.28.2": true
