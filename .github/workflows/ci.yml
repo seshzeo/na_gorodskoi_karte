@@ -5,6 +5,9 @@ on:
     branches:
       - main
       - ci/github-actions
+      - "fix/**"
+      - "test/**"
+      - "feature/**"
   pull_request:
     branches:
       - main
