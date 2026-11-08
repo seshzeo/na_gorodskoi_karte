@@ -67,3 +67,17 @@ npm run dev
 ```
 
 Frontend: http://127.0.0.1:5173
+
+## Установка как PWA
+
+Production build добавляет Web App Manifest и service worker. Service worker precache-ит
+только собранные статические ресурсы интерфейса и автоматически обновляет приложение;
+API-запросы и внешние OSM map tiles не кешируются. При потере сети оболочка приложения
+может открыться после первой успешной загрузки ресурсов, но данные карты и пользовательские
+операции остаются online-only.
+
+Для установки и работы service worker в production требуется HTTPS (кроме localhost).
+Vite использует корневой base path `/`; если deployment path изменится, нужно согласованно
+обновить Vite `base`, manifest `start_url`/`scope`, ссылку на manifest и service worker scope.
+Текущие PWA-иконки — временный оригинальный знак карты и метки; замените PNG-файлы в
+`public/` финальным логотипом, когда он будет готов, сохранив размеры и имена manifest.
