@@ -122,7 +122,7 @@ async def test_point_services_paths(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_point_update_paths(monkeypatch):
-    point = SimpleNamespace(id=1, title="Old", category_id=1, location=None)
+    point = SimpleNamespace(id=1, title="Old", category_id=1, location=None, point_type="event")
     db = MagicMock(); db.commit = AsyncMock()
     monkeypatch.setattr(points, "get_point", AsyncMock(return_value=(point, 46.0, 51.5)))
     monkeypatch.setattr(points, "get_active_category", AsyncMock(return_value=SimpleNamespace(id=2)))
@@ -140,7 +140,7 @@ async def test_point_update_missing_category_and_point(monkeypatch):
     db = MagicMock()
     monkeypatch.setattr(points, "get_point", AsyncMock(return_value=None))
     with pytest.raises(NotFoundError): await points.update_point(db, 1, {"title":"x"}, "m1")
-    point = SimpleNamespace(id=1, category_id=1, location=None)
+    point = SimpleNamespace(id=1, category_id=1, location=None, point_type="event")
     monkeypatch.setattr(points, "get_point", AsyncMock(return_value=(point, 1, 2)))
     monkeypatch.setattr(points, "get_active_category", AsyncMock(return_value=None))
     with pytest.raises(NotFoundError): await points.update_point(db, 1, {"category_id":2}, "m1")

@@ -42,7 +42,7 @@ it("restores a saved dark theme from localStorage", () => {
 });
 
 it("falls back to system theme when the saved value is invalid", () => {
-  vi.spyOn(Storage.prototype, "getItem").mockReturnValue("invalid");
+  vi.spyOn(localStorage, "getItem").mockReturnValue("invalid");
 
   render(
     <ThemeProvider>
@@ -93,10 +93,10 @@ it("updates the resolved theme when the system preference changes", async () => 
 });
 
 it("does not crash when localStorage is unavailable", () => {
-  vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+  vi.spyOn(localStorage, "getItem").mockImplementation(() => {
     throw new Error("Storage unavailable");
   });
-  vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+  vi.spyOn(localStorage, "setItem").mockImplementation(() => {
     throw new Error("Storage unavailable");
   });
 

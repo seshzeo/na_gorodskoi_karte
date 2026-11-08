@@ -9,7 +9,7 @@ from app.backend.schemas.point import (
     ModeratorPointPage, ModeratorPointRead, PointCreate, PointNearbyRead, PointPage, PointRead, PointUpdate,
 )
 from app.backend.schemas.common import ErrorResponse
-from app.backend.services.errors import ConflictError, NotFoundError
+from app.backend.services.errors import ConflictError, InvalidInputError, NotFoundError
 from app.backend.services.points import (
     fetch_moderator_points, fetch_nearby_points, fetch_point, fetch_points,
     create_point, hide_point, restore_point, update_point,
@@ -144,6 +144,8 @@ async def patch_map_point(
         return _point_data(row)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidInputError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.delete(
@@ -248,6 +250,8 @@ async def patch_moderator_point(
         return _point_data(row, include_active=True)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidInputError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @moderator_points_router.delete("/{point_id}", status_code=status.HTTP_204_NO_CONTENT)

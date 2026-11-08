@@ -162,9 +162,30 @@ export function ModeratorPage() {
           <nav className="moderator-nav">
             <div className="moderator-nav-title">Рабочая область</div>
             <div className="moderator-nav-items">
-              <div className="moderator-nav-item active">▤ <span>Заявки</span></div>
-              <button type="button" className="moderator-nav-item" onClick={() => setShowPointsPanel((value) => !value)}>⌖ <span>Опубликованные точки</span></button>
-              <div className="moderator-nav-item disabled">◇ <span>Категории</span><small>Скоро</small></div>
+            <button
+              type="button"
+              className={!showPointsPanel && !showPermanentForm ? "moderator-nav-item active" : "moderator-nav-item"}
+              onClick={() => { setShowPointsPanel(false); setShowPermanentForm(false); }}
+            >
+              ▤ <span>Заявки</span>
+            </button>
+            <button
+              type="button"
+              className={showPointsPanel ? "moderator-nav-item active" : "moderator-nav-item"}
+              aria-expanded={showPointsPanel}
+              onClick={() => { setShowPointsPanel((value) => !value); setShowPermanentForm(false); }}
+            >
+              ⌖ <span>Опубликованные точки</span>
+            </button>
+            <button
+              type="button"
+              className={showPermanentForm ? "moderator-nav-item active" : "moderator-nav-item"}
+              aria-expanded={showPermanentForm}
+              onClick={() => { setShowPermanentForm((value) => !value); setShowPointsPanel(false); }}
+            >
+              + <span>Создать постоянное место</span>
+            </button>
+            <div className="moderator-nav-item disabled">◇ <span>Категории</span><small>Скоро</small></div>
             </div>
             <div className="moderator-account">
               <span>Вы вошли как</span>
@@ -176,10 +197,26 @@ export function ModeratorPage() {
 
           <div className="moderator-content">
             <div className="moderator-panel-heading">
-              <div><h2>Очередь заявок</h2><p>Новые предложения от посетителей городской карты.</p></div>
-              <span className="status-pill pending">{requestsQuery.isLoading ? "Загрузка…" : `Заявок: ${requestsQuery.data?.total ?? 0}`}</span>
+              <div>
+                <h2>{showPointsPanel ? "Опубликованные точки" : showPermanentForm ? "Новое постоянное место" : "Очередь заявок"}</h2>
+                <p>{showPointsPanel ? "Управление опубликованными точками городской карты." : showPermanentForm ? "Добавьте постоянное место на карту." : "Новые предложения от посетителей городской карты."}</p>
+              </div>
+              {!showPointsPanel && !showPermanentForm && (
+                <span className="status-pill pending">{requestsQuery.isLoading ? "Загрузка…" : `Заявок: ${requestsQuery.data?.total ?? 0}`}</span>
+              )}
             </div>
 
+            {showPointsPanel ? (
+              <ModeratorPointsPanel categories={categoriesQuery.data ?? []} />
+            ) : showPermanentForm ? (
+              <CreatePermanentPlaceForm
+                categories={categoriesQuery.data ?? []}
+                authorName={moderator.username}
+                onCreated={() => setShowPermanentForm(false)}
+                onClose={() => setShowPermanentForm(false)}
+              />
+            ) : (
+              <>
             <div className="request-filters" role="tablist" aria-label="Фильтр заявок">
               {filters.map((item) => (
                 <button key={item.value} type="button" role="tab" aria-selected={filter === item.value}
@@ -272,6 +309,8 @@ export function ModeratorPage() {
                 )}
               </div>
             )}
+              </>
+            )}
           </div>
         </div>
       )}
@@ -284,10 +323,12 @@ function CreatePermanentPlaceForm({
   categories,
   authorName,
   onCreated,
+  onClose,
 }: {
   categories: Category[];
   authorName: string;
   onCreated: () => void;
+  onClose: () => void;
 }) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState({
@@ -312,6 +353,7 @@ function CreatePermanentPlaceForm({
       }),
     }),
     onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["moderator", "points"] });
       await queryClient.invalidateQueries({ queryKey: ["points"] });
       setForm({ title: "", description: "", category_id: "", latitude: "", longitude: "" });
       onCreated();
@@ -350,8 +392,15 @@ function CreatePermanentPlaceForm({
           <input required type="number" min="-180" max="180" step="any" value={form.longitude} onChange={(event) => setForm((current) => ({ ...current, longitude: event.target.value }))} />
         </label>
       </div>
-      {mutation.isError && <p className="form-error" role="alert">Не удалось создать место. Проверьте данные и повторите попытку.</p>}
+      {mutation.isError && (
+        <p className="form-error" role="alert">
+          {mutation.error instanceof ApiError && typeof mutation.error.detail === "string"
+            ? mutation.error.detail
+            : "Не удалось создать место. Проверьте данные и повторите попытку."}
+        </p>
+      )}
       <div className="dialog-footer">
+        <button type="button" className="button button-secondary" onClick={onClose}>Закрыть форму</button>
         <button type="submit" className="button button-primary" disabled={mutation.isPending || !form.category_id}>
           {mutation.isPending ? "Сохраняем…" : "Опубликовать место"}
         </button>

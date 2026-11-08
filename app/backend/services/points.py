@@ -5,7 +5,7 @@ from app.backend.repositories.category import get_active_category
 from app.backend.repositories.points import (
     get_point, list_moderator_points, list_points, make_location, nearby_points,
 )
-from app.backend.services.errors import ConflictError, NotFoundError
+from app.backend.services.errors import ConflictError, InvalidInputError, NotFoundError
 from app.backend.services.audit import record_moderator_action
 
 
@@ -62,6 +62,8 @@ async def update_point(
     if point_row is None:
         raise NotFoundError("Point not found")
     point = point_row[0]
+    if point.point_type == "permanent" and "event_at" in changes:
+        raise InvalidInputError("event_at cannot be updated for permanent points")
     changed_fields = sorted(changes)
     if "category_id" in changes:
         category = await get_active_category(db, changes["category_id"])

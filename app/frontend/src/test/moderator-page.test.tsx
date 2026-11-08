@@ -1,5 +1,6 @@
 ﻿import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { ApiError } from "../shared/api";
 import { ModeratorPage } from "../pages/moderator/ModeratorPage";
@@ -40,6 +41,7 @@ const mocks = vi.hoisted(() => ({
     mutateAsync: vi.fn(),
     isPending: false,
   },
+  api: vi.fn(),
   categoriesQuery: {
     data: [{ id: 1, name: "Parks", slug: "parks" }],
     isLoading: false,
@@ -64,6 +66,11 @@ vi.mock("../entities/category/model/useCategories", () => ({
   useCategories: () => mocks.categoriesQuery,
 }));
 
+vi.mock("../shared/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../shared/api")>();
+  return { ...actual, api: mocks.api };
+});
+
 function setAuthenticated() {
   mocks.auth.status = "authenticated";
   mocks.auth.moderator = { id: "m1", username: "admin" };
@@ -74,33 +81,50 @@ function makeRequest(overrides: Record<string, unknown> = {}) {
 }
 
 function renderModerator() {
-  return render(<ModeratorPage />);
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return {
+    queryClient,
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <ModeratorPage />
+      </QueryClientProvider>,
+    ),
+  };
+}
+
+function makeModeratorPoint() {
+  return {
+    id: 21,
+    title: "Community garden",
+    description: "A permanent community garden",
+    category_id: 1,
+    category_name: "Parks",
+    latitude: 51.5,
+    longitude: 46,
+    point_type: "permanent",
+    event_at: null,
+    author_name: "admin",
+    created_at: "2026-01-01T10:00:00Z",
+    updated_at: "2026-01-01T10:00:00Z",
+    is_active: true,
+  };
 }
 
 function getTabs() {
   return screen.getAllByRole("tab");
 }
 
-function getActionButton(fragment: string) {
-  let selector: string;
-
-  if (fragment.includes("Р’С‹Р№")) {
-    selector = ".moderator-account button";
-  } else if (fragment.includes("РћР±РЅ")) {
-    selector = ".request-refresh";
-  } else if (fragment.includes("РџРѕ")) {
-    selector = ".request-state-error button, .auth-panel button";
-  } else if (fragment.includes("РћРґ")) {
-    selector = ".request-actions > button.button-primary";
-  } else if (fragment.includes("РћС‚")) {
-    selector = ".request-reject-form button";
-  } else {
-    throw new Error(`Unknown action button: ${fragment}`);
-  }
-
-  const button = document.querySelector<HTMLButtonElement>(selector);
-  if (!button) throw new Error(`Button not found by selector: ${selector}`);
-  return button;
+function getActionButton(action: "logout" | "refresh" | "retry" | "approve" | "reject") {
+  const names = {
+    logout: "Выйти",
+    refresh: "↻ Обновить",
+    retry: "Повторить",
+    approve: "Одобрить заявку",
+    reject: "Отклонить заявку",
+  } as const;
+  return screen.getByRole("button", { name: names[action] });
 }
 
 beforeEach(() => {
@@ -141,6 +165,12 @@ beforeEach(() => {
 
   mocks.moderation.mutateAsync.mockResolvedValue({});
   mocks.moderation.isPending = false;
+  mocks.api.mockResolvedValue({
+    items: [makeModeratorPoint()],
+    total: 1,
+    limit: 100,
+    offset: 0,
+  });
 
   mocks.categoriesQuery.data = [
     { id: 1, name: "Parks", slug: "parks" },
@@ -233,12 +263,88 @@ describe("ModeratorPage — authenticated workspace", () => {
     expect(screen.getByText("An event description")).toBeInTheDocument();
   });
 
+  it("opens and closes the published points panel and shows its content", async () => {
+    const user = userEvent.setup();
+    renderModerator();
+
+    expect(screen.queryByText("Редактирование содержимого, архивирование и восстановление точек.")).not.toBeInTheDocument();
+    const toggle = screen.getByRole("button", { name: /Опубликованные точки/ });
+    await user.click(toggle);
+
+    expect(await screen.findByText("Community garden")).toBeInTheDocument();
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+    await user.click(toggle);
+
+    expect(screen.queryByText("Community garden")).not.toBeInTheDocument();
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("opens and closes the permanent-place form", async () => {
+    const user = userEvent.setup();
+    renderModerator();
+
+    expect(screen.queryByRole("heading", { name: "Новое постоянное место" })).not.toBeInTheDocument();
+    const toggle = screen.getByRole("button", { name: /Создать постоянное место/ });
+    await user.click(toggle);
+
+    expect(screen.getAllByRole("heading", { name: "Новое постоянное место" })).toHaveLength(2);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await user.click(screen.getByRole("button", { name: "Закрыть форму" }));
+    expect(screen.queryByRole("heading", { name: "Новое постоянное место" })).not.toBeInTheDocument();
+  });
+
+  it("creates a permanent place, invalidates the related queries, and closes the form", async () => {
+    const user = userEvent.setup();
+    mocks.api.mockResolvedValueOnce(makeModeratorPoint());
+    const { queryClient } = renderModerator();
+    const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries").mockResolvedValue(undefined);
+
+    await user.click(screen.getByRole("button", { name: /Создать постоянное место/ }));
+    await user.type(screen.getByLabelText("Название"), "Garden");
+    await user.selectOptions(screen.getByLabelText("Категория"), "1");
+    await user.type(screen.getByLabelText("Описание"), "A quiet garden");
+    await user.type(screen.getByLabelText("Широта"), "51.5");
+    await user.type(screen.getByLabelText("Долгота"), "46");
+    await user.click(screen.getByRole("button", { name: "Опубликовать место" }));
+
+    await waitFor(() => {
+      expect(mocks.api).toHaveBeenCalledWith(
+        "/moderator/points",
+        expect.objectContaining({
+          method: "POST",
+          body: expect.stringContaining('"point_type":"permanent"'),
+        }),
+      );
+      expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["moderator", "points"] });
+      expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["points"] });
+    });
+    expect(screen.queryByRole("heading", { name: "Новое постоянное место" })).not.toBeInTheDocument();
+  });
+
+  it("displays the API error when permanent-place creation fails", async () => {
+    const user = userEvent.setup();
+    mocks.api.mockRejectedValueOnce(new ApiError(422, "validation_error", "Category is unavailable"));
+    renderModerator();
+
+    await user.click(screen.getByRole("button", { name: /Создать постоянное место/ }));
+    await user.type(screen.getByLabelText("Название"), "Garden");
+    await user.selectOptions(screen.getByLabelText("Категория"), "1");
+    await user.type(screen.getByLabelText("Описание"), "A quiet garden");
+    await user.type(screen.getByLabelText("Широта"), "51.5");
+    await user.type(screen.getByLabelText("Долгота"), "46");
+    await user.click(screen.getByRole("button", { name: "Опубликовать место" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Category is unavailable");
+    expect(screen.getAllByRole("heading", { name: "Новое постоянное место" })).toHaveLength(2);
+  });
+
   it("logs out successfully", async () => {
     const user = userEvent.setup();
 
     renderModerator();
 
-    await user.click(getActionButton("Р’С‹Р№С‚Рё"));
+    await user.click(getActionButton("logout"));
 
     expect(mocks.auth.logout).toHaveBeenCalledOnce();
   });
@@ -251,7 +357,7 @@ describe("ModeratorPage — authenticated workspace", () => {
 
     renderModerator();
 
-    await user.click(getActionButton("Р’С‹Р№Рё"));
+    await user.click(getActionButton("logout"));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Session could not be closed",
@@ -264,7 +370,7 @@ describe("ModeratorPage — authenticated workspace", () => {
 
     renderModerator();
 
-    await user.click(getActionButton("Р’С‹Р№С‚Рё"));
+    await user.click(getActionButton("logout"));
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
@@ -305,7 +411,7 @@ describe("ModeratorPage — authenticated workspace", () => {
 
     renderModerator();
 
-    await user.click(getActionButton("РћР±РЅРѕРІРёС‚СЊ"));
+    await user.click(getActionButton("refresh"));
 
     expect(mocks.requestsQuery.refetch).toHaveBeenCalledOnce();
   });
@@ -315,7 +421,7 @@ describe("ModeratorPage — authenticated workspace", () => {
 
     renderModerator();
 
-    expect(getActionButton("РћР±РЅРѕРІРёС‚СЊ")).toBeDisabled();
+    expect(getActionButton("refresh")).toBeDisabled();
   });
 
   it("shows the request loading state", () => {
@@ -351,7 +457,7 @@ describe("ModeratorPage — authenticated workspace", () => {
 
     renderModerator();
 
-    await user.click(getActionButton("РџРѕРІС‚РѕСЂРёС‚СЊ"));
+    await user.click(getActionButton("retry"));
 
     expect(mocks.requestsQuery.refetch).toHaveBeenCalledOnce();
   });
@@ -442,8 +548,8 @@ describe("ModeratorPage — authenticated workspace", () => {
 
     renderModerator();
 
-    expect(screen.queryByRole("button", { name: /РћРґРѕР±СЂРёС‚СЊ/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /РћС‚РєР»РѕРЅРёС‚СЊ/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Одобрить заявку" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Отклонить заявку" })).not.toBeInTheDocument();
   });
 });
 
@@ -457,7 +563,7 @@ describe("ModeratorPage — moderation actions", () => {
 
     renderModerator();
 
-    await user.click(getActionButton("РћРґРѕР±СЂРёС‚СЊ"));
+    await user.click(getActionButton("approve"));
 
     expect(mocks.moderation.mutateAsync).toHaveBeenCalledWith({
       id: 1,
@@ -473,7 +579,7 @@ describe("ModeratorPage — moderation actions", () => {
 
     renderModerator();
 
-    await user.click(getActionButton("РћРґРѕР±СЂРёС‚СЊ"));
+    await user.click(getActionButton("approve"));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Approval rejected",
@@ -486,7 +592,7 @@ describe("ModeratorPage — moderation actions", () => {
 
     renderModerator();
 
-    await user.click(getActionButton("РћРґРѕР±РёС‚СЊ"));
+    await user.click(getActionButton("approve"));
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
@@ -498,7 +604,7 @@ describe("ModeratorPage — moderation actions", () => {
 
     const textarea = screen.getByRole("textbox");
     await user.type(textarea, "  Not enough information  ");
-    await user.click(getActionButton("РћС‚РєР»РѕРЅРёС‚СЊ"));
+    await user.click(getActionButton("reject"));
 
     expect(mocks.moderation.mutateAsync).toHaveBeenCalledWith({
       id: 1,
@@ -510,7 +616,7 @@ describe("ModeratorPage — moderation actions", () => {
   it("does not submit a rejection with an empty reason", () => {
     renderModerator();
 
-    expect(getActionButton("РћС‚РєР»РѕРЅРёС‚СЊ")).toBeDisabled();
+    expect(getActionButton("reject")).toBeDisabled();
   });
 
   it("shows an API error when rejection fails", async () => {
@@ -522,7 +628,7 @@ describe("ModeratorPage — moderation actions", () => {
     renderModerator();
 
     await user.type(screen.getByRole("textbox"), "Invalid event");
-    await user.click(getActionButton("РћС‚РєР»РѕРЅРёС‚СЊ"));
+    await user.click(getActionButton("reject"));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Rejection failed",
@@ -536,7 +642,7 @@ describe("ModeratorPage — moderation actions", () => {
     renderModerator();
 
     await user.type(screen.getByRole("textbox"), "Invalid event");
-    await user.click(getActionButton("РћС‚РєР»РѕРЅРёС‚СЊ"));
+    await user.click(getActionButton("reject"));
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
@@ -546,8 +652,8 @@ describe("ModeratorPage — moderation actions", () => {
 
     renderModerator();
 
-    expect(getActionButton("РћРґРѕР±СЂРёС‚СЊ")).toBeDisabled();
-    expect(getActionButton("РћС‚РєР»РѕРЅРёС‚СЊ")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Обрабатываем…" })).toBeDisabled();
+    expect(getActionButton("reject")).toBeDisabled();
   });
 
   it("clears the rejection reason when another request is selected", async () => {
