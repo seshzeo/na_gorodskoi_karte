@@ -15,6 +15,8 @@ export function ModeratorPointsPanel({ categories }: { categories: Category[] })
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<PointStatus>("active");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [archiveErrorId, setArchiveErrorId] = useState<number | null>(null);
+  const [restoreErrorId, setRestoreErrorId] = useState<number | null>(null);
   const pointsQuery = useQuery({
     queryKey: ["moderator", "points", status],
     queryFn: () => api<Page<ModeratorPoint>>(`/moderator/points?status=${status}&limit=100&offset=0`),
@@ -56,14 +58,18 @@ export function ModeratorPointsPanel({ categories }: { categories: Category[] })
       setSelectedId(null);
       await queryClient.invalidateQueries({ queryKey: ["moderator", "points"] });
       await queryClient.invalidateQueries({ queryKey: ["points"] });
+      setArchiveErrorId(null);
     },
+    onError: (_error, point) => setArchiveErrorId(point.id),
   });
   const restore = useMutation({
     mutationFn: (point: ModeratorPoint) => api<ModeratorPoint>(`/moderator/points/${point.id}/restore`, { method: "POST" }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["moderator", "points"] });
       await queryClient.invalidateQueries({ queryKey: ["points"] });
+      setRestoreErrorId(null);
     },
+    onError: (_error, point) => setRestoreErrorId(point.id),
   });
 
   function selectPoint(point: ModeratorPoint) {
@@ -120,6 +126,8 @@ export function ModeratorPointsPanel({ categories }: { categories: Category[] })
             </div>
             {selected.point_type === "event" && <label className="form-field"><span>Дата и время начала</span><input required type="datetime-local" value={form.event_at} onChange={(event) => setForm((current) => ({ ...current, event_at: event.target.value }))} /></label>}
             {update.isError && <p className="form-error" role="alert">Не удалось сохранить изменения.</p>}
+            {archiveErrorId === selected.id && <p className="form-error" role="alert">Не удалось переместить точку в архив.</p>}
+            {restoreErrorId === selected.id && <p className="form-error" role="alert">Не удалось восстановить точку.</p>}
             <div className="dialog-footer">
               <button className="button button-primary" type="submit" disabled={update.isPending}>{update.isPending ? "Сохраняем…" : "Сохранить"}</button>
               {selected.is_active

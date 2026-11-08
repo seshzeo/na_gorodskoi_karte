@@ -127,6 +127,63 @@ describe("ModeratorPointsPanel", () => {
     });
   });
 
+  it("keeps the archive error through a retry and clears it after success", async () => {
+    const user = userEvent.setup();
+    let active = true;
+    let archiveCalls = 0;
+    let completeRetry!: () => void;
+    mocks.api.mockImplementation((url: string) => {
+      if (url === "/moderator/points/21") {
+        archiveCalls += 1;
+        if (archiveCalls === 1) {
+          return Promise.reject(new Error("Network failure"));
+        }
+        return new Promise<void>((resolve) => {
+          completeRetry = () => {
+            active = false;
+            resolve();
+          };
+        });
+      }
+      const items = active ? [makePoint()] : [];
+      return Promise.resolve({
+        items,
+        total: items.length,
+        limit: 100,
+        offset: 0,
+      });
+    });
+    renderPanel();
+
+    await user.click(await screen.findByRole("button", { name: /Community event/ }));
+    await user.click(screen.getByRole("button", { name: "В архив" }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "Не удалось переместить точку в архив.",
+    );
+    expect(mocks.api).toHaveBeenCalledWith(
+      "/moderator/points/21",
+      expect.objectContaining({ method: "DELETE" }),
+    );
+    expect(screen.getByText("Community event")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "В архив" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "В архив" }));
+    await waitFor(() => expect(archiveCalls).toBe(2));
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Не удалось переместить точку в архив.",
+    );
+    expect(screen.getByText("Community event")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "В архив" })).toBeInTheDocument();
+
+    completeRetry();
+    await waitFor(() => {
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.queryByText("Community event")).not.toBeInTheDocument();
+    });
+  });
+
   it("restores an archived point and supports status filters and refresh", async () => {
     const user = userEvent.setup();
     const archivedPoint = makePoint({ is_active: false });
@@ -156,6 +213,66 @@ describe("ModeratorPointsPanel", () => {
     expect(mocks.api).toHaveBeenCalledWith(
       "/moderator/points?status=all&limit=100&offset=0",
     );
+  });
+
+  it("keeps the restore error through a retry and clears it after success", async () => {
+    const user = userEvent.setup();
+    let restored = false;
+    let restoreCalls = 0;
+    let completeRetry!: () => void;
+    mocks.api.mockImplementation((url: string) => {
+      if (url.includes("/restore")) {
+        restoreCalls += 1;
+        if (restoreCalls === 1) {
+          return Promise.reject(new Error("Network failure"));
+        }
+        return new Promise((resolve) => {
+          completeRetry = () => {
+            restored = true;
+            resolve(makePoint());
+          };
+        });
+      }
+      const archived = url.includes("status=archived");
+      const items = archived && !restored
+        ? [makePoint({ is_active: false })]
+        : [];
+      return Promise.resolve({
+        items,
+        total: items.length,
+        limit: 100,
+        offset: 0,
+      });
+    });
+    renderPanel();
+
+    await user.click(screen.getByRole("button", { name: "В архиве" }));
+    await user.click(await screen.findByRole("button", { name: /Community event/ }));
+    await user.click(screen.getByRole("button", { name: "Восстановить" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Не удалось восстановить точку.",
+    );
+    expect(mocks.api).toHaveBeenCalledWith(
+      "/moderator/points/21/restore",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(screen.getByText("Community event")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Восстановить" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Восстановить" }));
+    await waitFor(() => expect(restoreCalls).toBe(2));
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Не удалось восстановить точку.",
+    );
+    expect(screen.getByText("Community event")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Восстановить" })).toBeInTheDocument();
+
+    completeRetry();
+    await waitFor(() => {
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.queryByText("Community event")).not.toBeInTheDocument();
+    });
   });
 
   it("does not render an event date field for permanent points", async () => {
