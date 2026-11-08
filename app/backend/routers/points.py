@@ -6,13 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.backend.core.database import get_db
 from app.backend.core.security import require_moderator
 from app.backend.schemas.point import (
-    ModeratorPointPage, ModeratorPointRead, PointNearbyRead, PointPage, PointRead, PointUpdate,
+    ModeratorPointPage, ModeratorPointRead, PointCreate, PointNearbyRead, PointPage, PointRead, PointUpdate,
 )
 from app.backend.schemas.common import ErrorResponse
-from app.backend.services.errors import ConflictError, NotFoundError
+from app.backend.services.errors import ConflictError, InvalidInputError, NotFoundError
 from app.backend.services.points import (
     fetch_moderator_points, fetch_nearby_points, fetch_point, fetch_points,
-    hide_point, restore_point, update_point,
+    create_point, hide_point, restore_point, update_point,
 )
 
 router = APIRouter(
@@ -44,6 +44,7 @@ def _point_data(row, *, include_active: bool = False):
         "category_name": point.category.name,
         "latitude": latitude,
         "longitude": longitude,
+        "point_type": point.point_type,
         "event_at": point.event_at,
         "author_name": point.author_name,
         "created_at": point.created_at,
@@ -143,6 +144,8 @@ async def patch_map_point(
         return _point_data(row)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidInputError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.delete(
@@ -177,6 +180,19 @@ async def restore_map_point(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@moderator_points_router.post("", response_model=ModeratorPointRead, status_code=status.HTTP_201_CREATED)
+async def create_moderator_point(
+    payload: PointCreate,
+    db: AsyncSession = Depends(get_db),
+    moderator_id: str = Depends(require_moderator),
+):
+    try:
+        row = await create_point(db, payload.model_dump(), moderator_id)
+        return _point_data(row, include_active=True)
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @moderator_points_router.get("", response_model=ModeratorPointPage)
@@ -234,6 +250,8 @@ async def patch_moderator_point(
         return _point_data(row, include_active=True)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidInputError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @moderator_points_router.delete("/{point_id}", status_code=status.HTTP_204_NO_CONTENT)

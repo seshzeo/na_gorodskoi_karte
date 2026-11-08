@@ -1,9 +1,12 @@
 import { useState, type FormEvent } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCategories } from "../../entities/category/model/useCategories";
 import { useModeratePointRequest, usePointRequests, type RequestFilter } from "../../features/moderation/model/usePointRequests";
 import { ApiError } from "../../shared/api";
 import { useAuthStore } from "../../features/auth/model/authStore";
-import type { PointRequestRead } from "../../entities";
+import type { Category, Point, PointRequestRead } from "../../entities";
+import { ModeratorPointsPanel } from "./ModeratorPointsPanel";
+import { api } from "../../shared/api";
 
 const filters: { value: RequestFilter; label: string }[] = [
   { value: "pending", label: "Новые" },
@@ -43,6 +46,8 @@ export function ModeratorPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [showPermanentForm, setShowPermanentForm] = useState(false);
+  const [showPointsPanel, setShowPointsPanel] = useState(false);
 
   const requestsQuery = usePointRequests(filter);
   const categoriesQuery = useCategories();
@@ -156,9 +161,32 @@ export function ModeratorPage() {
         <div className="moderator-layout">
           <nav className="moderator-nav">
             <div className="moderator-nav-title">Рабочая область</div>
-            <div className="moderator-nav-item active">▤ <span>Заявки</span></div>
-            <div className="moderator-nav-item disabled">⌖ <span>Опубликованные точки</span><small>Скоро</small></div>
+            <div className="moderator-nav-items">
+            <button
+              type="button"
+              className={!showPointsPanel && !showPermanentForm ? "moderator-nav-item active" : "moderator-nav-item"}
+              onClick={() => { setShowPointsPanel(false); setShowPermanentForm(false); }}
+            >
+              ▤ <span>Заявки</span>
+            </button>
+            <button
+              type="button"
+              className={showPointsPanel ? "moderator-nav-item active" : "moderator-nav-item"}
+              aria-expanded={showPointsPanel}
+              onClick={() => { setShowPointsPanel((value) => !value); setShowPermanentForm(false); }}
+            >
+              ⌖ <span>Опубликованные точки</span>
+            </button>
+            <button
+              type="button"
+              className={showPermanentForm ? "moderator-nav-item active" : "moderator-nav-item"}
+              aria-expanded={showPermanentForm}
+              onClick={() => { setShowPermanentForm((value) => !value); setShowPointsPanel(false); }}
+            >
+              + <span>Создать постоянное место</span>
+            </button>
             <div className="moderator-nav-item disabled">◇ <span>Категории</span><small>Скоро</small></div>
+            </div>
             <div className="moderator-account">
               <span>Вы вошли как</span>
               <strong>{moderator.username}</strong>
@@ -169,10 +197,26 @@ export function ModeratorPage() {
 
           <div className="moderator-content">
             <div className="moderator-panel-heading">
-              <div><h2>Очередь заявок</h2><p>Новые предложения от посетителей городской карты.</p></div>
-              <span className="status-pill pending">{requestsQuery.isLoading ? "Загрузка…" : `Заявок: ${requestsQuery.data?.total ?? 0}`}</span>
+              <div>
+                <h2>{showPointsPanel ? "Опубликованные точки" : showPermanentForm ? "Новое постоянное место" : "Очередь заявок"}</h2>
+                <p>{showPointsPanel ? "Управление опубликованными точками городской карты." : showPermanentForm ? "Добавьте постоянное место на карту." : "Новые предложения от посетителей городской карты."}</p>
+              </div>
+              {!showPointsPanel && !showPermanentForm && (
+                <span className="status-pill pending">{requestsQuery.isLoading ? "Загрузка…" : `Заявок: ${requestsQuery.data?.total ?? 0}`}</span>
+              )}
             </div>
 
+            {showPointsPanel ? (
+              <ModeratorPointsPanel categories={categoriesQuery.data ?? []} />
+            ) : showPermanentForm ? (
+              <CreatePermanentPlaceForm
+                categories={categoriesQuery.data ?? []}
+                authorName={moderator.username}
+                onCreated={() => setShowPermanentForm(false)}
+                onClose={() => setShowPermanentForm(false)}
+              />
+            ) : (
+              <>
             <div className="request-filters" role="tablist" aria-label="Фильтр заявок">
               {filters.map((item) => (
                 <button key={item.value} type="button" role="tab" aria-selected={filter === item.value}
@@ -265,9 +309,102 @@ export function ModeratorPage() {
                 )}
               </div>
             )}
+              </>
+            )}
           </div>
         </div>
       )}
     </section>
+  );
+}
+
+
+function CreatePermanentPlaceForm({
+  categories,
+  authorName,
+  onCreated,
+  onClose,
+}: {
+  categories: Category[];
+  authorName: string;
+  onCreated: () => void;
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    category_id: "",
+    latitude: "",
+    longitude: "",
+  });
+  const mutation = useMutation({
+    mutationFn: () => api<Point>("/moderator/points", {
+      method: "POST",
+      body: JSON.stringify({
+        title: form.title.trim(),
+        description: form.description.trim(),
+        category_id: Number(form.category_id),
+        latitude: Number(form.latitude),
+        longitude: Number(form.longitude),
+        point_type: "permanent",
+        event_at: null,
+        author_name: authorName,
+      }),
+    }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["moderator", "points"] });
+      await queryClient.invalidateQueries({ queryKey: ["points"] });
+      setForm({ title: "", description: "", category_id: "", latitude: "", longitude: "" });
+      onCreated();
+    },
+  });
+
+  return (
+    <form className="auth-panel" onSubmit={(event) => { event.preventDefault(); mutation.mutate(); }}>
+      <div className="auth-panel-heading">
+        <span className="page-kicker">Публикация модератора</span>
+        <h2>Новое постоянное место</h2>
+        <p>Для постоянных мест дата и время не указываются.</p>
+      </div>
+      <div className="form-grid">
+        <label className="form-field">
+          <span>Название</span>
+          <input required maxLength={200} value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
+        </label>
+        <label className="form-field">
+          <span>Категория</span>
+          <select required value={form.category_id} onChange={(event) => setForm((current) => ({ ...current, category_id: event.target.value }))}>
+            <option value="">Выберите категорию</option>
+            {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+          </select>
+        </label>
+        <label className="form-field form-field-wide">
+          <span>Описание</span>
+          <textarea required maxLength={5000} value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
+        </label>
+        <label className="form-field">
+          <span>Широта</span>
+          <input required type="number" min="-90" max="90" step="any" value={form.latitude} onChange={(event) => setForm((current) => ({ ...current, latitude: event.target.value }))} />
+        </label>
+        <label className="form-field">
+          <span>Долгота</span>
+          <input required type="number" min="-180" max="180" step="any" value={form.longitude} onChange={(event) => setForm((current) => ({ ...current, longitude: event.target.value }))} />
+        </label>
+      </div>
+      {mutation.isError && (
+        <p className="form-error" role="alert">
+          {mutation.error instanceof ApiError && typeof mutation.error.detail === "string"
+            ? mutation.error.detail
+            : "Не удалось создать место. Проверьте данные и повторите попытку."}
+        </p>
+      )}
+      <div className="dialog-footer">
+        <button type="button" className="button button-secondary" onClick={onClose}>Закрыть форму</button>
+        <button type="submit" className="button button-primary" disabled={mutation.isPending || !form.category_id}>
+          {mutation.isPending ? "Сохраняем…" : "Опубликовать место"}
+        </button>
+      </div>
+    </form>
   );
 }

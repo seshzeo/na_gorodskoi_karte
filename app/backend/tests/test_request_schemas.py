@@ -3,7 +3,8 @@ from pydantic import ValidationError
 
 from app.backend.schemas.auth import LoginRequest
 from app.backend.schemas.category import CategoryUpdate
-from app.backend.schemas.point import PointUpdate
+from app.backend.schemas.point import PointCreate, PointUpdate
+from app.backend.schemas.point_request import PointRequestCreate
 
 
 def test_login_rejects_unknown_fields():
@@ -35,3 +36,85 @@ def test_point_update_accepts_coordinate_pair():
 def test_point_update_requires_timezone_aware_event_datetime():
     with pytest.raises(ValidationError):
         PointUpdate(event_at="2026-11-10T18:00:00")
+
+
+def test_point_update_accepts_future_event_datetime():
+    payload = PointUpdate(event_at="2099-11-10T18:00:00+04:00")
+    assert payload.event_at.year == 2099
+
+
+def test_point_request_create_accepts_future_event_datetime():
+    payload = PointRequestCreate(
+        author_name="Тестовый автор",
+        title="Вымышленное событие",
+        description="Тестовое описание",
+        category_id=1,
+        latitude=52.0,
+        longitude=47.8,
+        event_at="2099-11-10T18:00:00+04:00",
+    )
+    assert payload.event_at.year == 2099
+
+
+def test_point_request_create_accepts_past_event_datetime():
+    payload = PointRequestCreate(
+        author_name="Тестовый автор",
+        title="Вымышленное событие",
+        description="Тестовое описание",
+        category_id=1,
+        latitude=52.0,
+        longitude=47.8,
+        event_at="2020-01-01T12:00:00+04:00",
+    )
+    assert payload.event_at.year == 2020
+
+
+def test_moderator_can_create_permanent_place_without_event_date():
+    payload = PointCreate(
+        title="Парк",
+        description="Постоянное место",
+        category_id=1,
+        latitude=52.0,
+        longitude=47.8,
+        point_type="permanent",
+    )
+    assert payload.point_type == "permanent"
+    assert payload.event_at is None
+
+
+def test_moderator_event_requires_timezone_aware_start():
+    with pytest.raises(ValidationError):
+        PointCreate(
+            title="Концерт",
+            description="Событие",
+            category_id=1,
+            latitude=52.0,
+            longitude=47.8,
+            point_type="event",
+            event_at="2099-11-10T18:00:00",
+        )
+
+
+def test_moderator_event_requires_start_date():
+    with pytest.raises(ValidationError, match="event_at is required"):
+        PointCreate(
+            title="Концерт",
+            description="Событие",
+            category_id=1,
+            latitude=52.0,
+            longitude=47.8,
+            point_type="event",
+        )
+
+
+def test_permanent_place_rejects_event_date():
+    with pytest.raises(ValidationError, match="event_at must be omitted"):
+        PointCreate(
+            title="Парк",
+            description="Постоянное место",
+            category_id=1,
+            latitude=52.0,
+            longitude=47.8,
+            point_type="permanent",
+            event_at="2099-11-10T18:00:00+04:00",
+        )

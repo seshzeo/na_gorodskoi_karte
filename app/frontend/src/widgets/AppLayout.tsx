@@ -1,8 +1,9 @@
 import {useState} from "react";
 import {NavLink,Outlet} from "react-router-dom";
 import {useTheme} from "../shared/theme/ThemeProvider";
+import {CITIES,useCity} from "../shared/city/CityProvider";
 export function AppLayout(){
- const [collapsed,setCollapsed]=useState(false);const [mobileOpen,setMobileOpen]=useState(false);const {mode,setMode}=useTheme();
+ const [collapsed,setCollapsed]=useState(false);const [mobileOpen,setMobileOpen]=useState(false);const {mode,setMode}=useTheme();const {city,setCity}=useCity();
  const nextTheme=mode==="system"?"light":mode==="light"?"dark":"system";const themeLabel=mode==="system"?"Авто":mode==="light"?"Светлая":"Тёмная";
  return <div className="app-shell"><header className="app-header">
   <button className="icon-button mobile-menu-button" aria-label="Открыть меню" onClick={()=>setMobileOpen(v=>!v)}>☰</button>
@@ -11,6 +12,7 @@ export function AppLayout(){
  </header><div className="app-body"><div className={"sidebar-backdrop "+(mobileOpen?"visible":"")} onClick={()=>setMobileOpen(false)}/>
   <aside className={"app-sidebar "+(collapsed?"collapsed ":"")+(mobileOpen?"mobile-open":"")}><div className="sidebar-topline"><span className="eyebrow">Навигация</span><button className="icon-button collapse-button" onClick={()=>setCollapsed(v=>!v)} aria-label={collapsed?"Развернуть меню":"Свернуть меню"}>{collapsed?"⇥":"⇤"}</button><button className="icon-button mobile-close" onClick={()=>setMobileOpen(false)} aria-label="Закрыть меню">×</button></div>
    <nav className="sidebar-nav"><NavLink to="/" end className={({isActive})=>"sidebar-link "+(isActive?"active":"")} onClick={()=>setMobileOpen(false)}><span className="nav-icon">⌖</span><span className="nav-label">Карта</span></NavLink><NavLink to="/moderator" className={({isActive})=>"sidebar-link "+(isActive?"active":"")} onClick={()=>setMobileOpen(false)}><span className="nav-icon">▣</span><span className="nav-label">Кабинет модератора</span></NavLink></nav>
+   <div className="sidebar-city"><label htmlFor="city-select">Выбранный город</label><select id="city-select" value={city.id} onChange={event=>setCity(event.target.value)}>{CITIES.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select><small>Карта переместится в центр города</small></div>
    <div className="sidebar-divider"/><div className="sidebar-foot"><span className="sidebar-foot-mark">●</span><span className="nav-label">Открытая городская карта</span></div>
   </aside><main className="app-main"><Outlet/></main></div></div>;
 }
