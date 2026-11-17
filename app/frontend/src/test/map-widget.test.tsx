@@ -324,7 +324,7 @@ it("injects the configured public key into a locally hosted style", async () => 
   ol.applyStyleMock.mockClear();
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
     ok: true,
-    json: async () => ({ sources: { streets: { url: "https://tiles.example.com/tiles.json?key=__MAPTILER_KEY__" } } }),
+    json: async () => ({ sources: { streets: { url: "https://api.maptiler.com/tiles/v4/tiles.json?key=__MAPTILER_KEY__" } } }),
   }));
   ol.usePointsMock.mockReturnValue({ data: [], isFetching: false, isError: false });
 
@@ -332,7 +332,15 @@ it("injects the configured public key into a locally hosted style", async () => 
 
   await waitFor(() => expect(ol.applyStyleMock).toHaveBeenCalledWith(
     expect.anything(),
-    { sources: { streets: { url: "https://tiles.example.com/tiles.json?key=restricted-browser-key" } } },
+    {
+      sources: {
+        streets: {
+          tiles: ["https://api.maptiler.com/tiles/v4/{z}/{x}/{y}.pbf?key=restricted-browser-key"],
+          minzoom: 0,
+          maxzoom: 14,
+        },
+      },
+    },
   ));
 
   vi.unstubAllEnvs();

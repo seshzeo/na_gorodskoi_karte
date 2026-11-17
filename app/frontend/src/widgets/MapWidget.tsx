@@ -10,6 +10,7 @@ const createBaseSource=()=>{
  const attributions=(import.meta.env.VITE_MAP_TILE_ATTRIBUTION??"").trim();
  return url?new XYZ({url,attributions:attributions||undefined}):new OSM();
 };
+const isRecord=(value:unknown):value is Record<string,unknown>=>Boolean(value)&&typeof value==="object"&&!Array.isArray(value);
 const loadMapStyle=async(url:string)=>{
  if(!url.startsWith("/")&&!url.startsWith("./"))return url;
  const response=await fetch(url);
@@ -25,7 +26,18 @@ const loadMapStyle=async(url:string)=>{
   if(value&&typeof value==="object")return Object.fromEntries(Object.entries(value).map(([key,item])=>[key,replaceKey(item)]));
   return value;
  };
- return replaceKey(style);
+ const resolvedStyle=replaceKey(style);
+ if(!isRecord(resolvedStyle)||!isRecord(resolvedStyle.sources))return resolvedStyle;
+ for(const source of Object.values(resolvedStyle.sources)){
+  if(!isRecord(source)||typeof source.url!=="string")continue;
+  const sourceUrl=new URL(source.url);
+  if(sourceUrl.hostname!=="api.maptiler.com"||!/^\/tiles\/v4\/tiles\.json$/.test(sourceUrl.pathname))continue;
+  source.tiles=[`${sourceUrl.origin}${sourceUrl.pathname.replace(/tiles\.json$/,"{z}/{x}/{y}.pbf")}${sourceUrl.search}`];
+  source.minzoom=0;
+  source.maxzoom=14;
+  delete source.url;
+ }
+ return resolvedStyle;
 };
 export function MapWidget({categoryId,city,onSelect,onMapClick}:{categoryId?:number;city:City;onSelect:(point:Point)=>void;onMapClick:(coordinates:{latitude:number;longitude:number})=>void}){
  const el=useRef<HTMLDivElement>(null);const map=useRef<Map|null>(null);const styleRequest=useRef(0);const[bbox,setBbox]=useState<string>();
