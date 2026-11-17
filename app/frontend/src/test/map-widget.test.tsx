@@ -6,6 +6,11 @@ const ol = vi.hoisted(() => ({
   maps: [] as any[],
   features: [] as any[],
   usePointsMock: vi.fn(),
+  applyStyleMock: vi.fn((..._args: any[]) => Promise.resolve()),
+}));
+
+vi.mock("ol-mapbox-style", () => ({
+  apply: (...args: unknown[]) => ol.applyStyleMock(...args),
 }));
 
 vi.mock("../entities/point/model/usePoints", () => ({
@@ -38,6 +43,7 @@ vi.mock("ol/Map", () => ({
       this.handlers.set(event, (this.handlers.get(event) ?? []).filter((fn) => fn !== callback));
     }
     setTarget(target: any) { this.target = target; }
+    setLayerGroup(group: any) { this.layers = [group]; }
     addLayer(layer: any) { this.layers.push(layer); }
     removeLayer(layer: any) { this.layers = this.layers.filter((item) => item !== layer); }
     forEachFeatureAtPixel(_pixel: any, callback: Function) {
@@ -62,8 +68,27 @@ vi.mock("ol/layer/Tile", () => ({
   },
 }));
 
+vi.mock("ol/layer/Group", () => ({
+  default: class MockLayerGroup {
+    layers: any[] = [];
+    getLayers() {
+      const self = this;
+      return {
+        clear() { self.layers = []; },
+        push(layer: any) { self.layers.push(layer); return self.layers.length; },
+      };
+    }
+  },
+}));
+
 vi.mock("ol/source/OSM", () => ({
   default: class MockOSM {},
+}));
+
+vi.mock("ol/source/XYZ", () => ({
+  default: class MockXYZ {
+    constructor(public options: any) {}
+  },
 }));
 
 vi.mock("ol/layer/Vector", () => ({
@@ -134,8 +159,22 @@ const point = {
   status: "approved",
 };
 
+beforeEach(() => {
+  vi.stubEnv("VITE_MAP_TILE_URL", "");
+  vi.stubEnv("VITE_MAP_TILE_ATTRIBUTION", "");
+  vi.stubEnv("VITE_MAP_STYLE_URL", "");
+  vi.stubEnv("VITE_MAP_STYLE_URL_DARK", "");
+  vi.stubEnv("VITE_MAPTILER_API_KEY", "");
+});
+
 describe("MapWidget", () => {
   beforeEach(() => {
+    vi.stubEnv("VITE_MAP_TILE_URL", "");
+    vi.stubEnv("VITE_MAP_TILE_ATTRIBUTION", "");
+    vi.stubEnv("VITE_MAP_STYLE_URL", "");
+    vi.stubEnv("VITE_MAP_STYLE_URL_DARK", "");
+    vi.stubEnv("VITE_MAPTILER_API_KEY", "");
+    delete document.documentElement.dataset.theme;
     ol.maps.length = 0;
     ol.features.length = 0;
     ol.usePointsMock.mockReset();
@@ -146,7 +185,10 @@ describe("MapWidget", () => {
     });
   });
 
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllEnvs();
+  });
 
   it("creates the map, loads points and selects a clicked marker", async () => {
     const onSelect = vi.fn();
@@ -230,6 +272,147 @@ it("removes the moveend handler on unmount", () => {
   expect(map.target).toBeUndefined();
 });
 
+it("uses a custom XYZ tile source when VITE_MAP_TILE_URL is set", () => {
+  vi.stubEnv("VITE_MAP_TILE_URL", "https://tiles.example.com/{z}/{x}/{y}.png");
+  vi.stubEnv("VITE_MAP_TILE_ATTRIBUTION", "© Tile provider");
+  vi.stubEnv("VITE_MAP_STYLE_URL", "");
+  ol.maps.length = 0;
+  ol.usePointsMock.mockReturnValue({ data: [], isFetching: false, isError: false });
+
+  render(<MapWidget city={city} onSelect={vi.fn()} onMapClick={vi.fn()} />);
+
+  const baseSource = ol.maps[0].layers[0].layers[0].options.source;
+  expect(baseSource.options.url).toBe("https://tiles.example.com/{z}/{x}/{y}.png");
+  expect(baseSource.options.attributions).toBe("© Tile provider");
+
+  vi.unstubAllEnvs();
+});
+
+it("applies a vector style when VITE_MAP_STYLE_URL is set", async () => {
+  vi.stubEnv("VITE_MAP_TILE_URL", "");
+  vi.stubEnv("VITE_MAP_STYLE_URL", "https://api.example.com/style.json?key=test");
+  ol.maps.length = 0;
+  ol.applyStyleMock.mockClear();
+  ol.usePointsMock.mockReturnValue({ data: [], isFetching: false, isError: false });
+
+  render(<MapWidget city={city} onSelect={vi.fn()} onMapClick={vi.fn()} />);
+
+  await waitFor(() => expect(ol.applyStyleMock).toHaveBeenCalledWith(expect.anything(), "https://api.example.com/style.json?key=test"));
+
+  vi.unstubAllEnvs();
+});
+
+it("falls back to a tile layer when the vector style fails to load", async () => {
+  vi.stubEnv("VITE_MAP_TILE_URL", "");
+  vi.stubEnv("VITE_MAP_STYLE_URL", "https://api.example.com/broken-style.json");
+  ol.maps.length = 0;
+  ol.applyStyleMock.mockRejectedValueOnce(new Error("invalid key"));
+  ol.usePointsMock.mockReturnValue({ data: [], isFetching: false, isError: false });
+  vi.spyOn(console, "error").mockImplementation(() => {});
+
+  render(<MapWidget city={city} onSelect={vi.fn()} onMapClick={vi.fn()} />);
+
+  await waitFor(() => expect(ol.maps[0].layers[0].layers.some((layer: any) => layer.options?.className === "base-map-layer")).toBe(true));
+
+  vi.unstubAllEnvs();
+});
+
+it("injects the configured public key into a locally hosted style", async () => {
+  vi.stubEnv("VITE_MAP_STYLE_URL", "/styles/map-light.json");
+  vi.stubEnv("VITE_MAPTILER_API_KEY", "restricted-browser-key");
+  ol.maps.length = 0;
+  ol.applyStyleMock.mockClear();
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ sources: { streets: { url: "https://api.maptiler.com/tiles/v4/tiles.json?key=__MAPTILER_KEY__" } } }),
+  }));
+  ol.usePointsMock.mockReturnValue({ data: [], isFetching: false, isError: false });
+
+  render(<MapWidget city={city} onSelect={vi.fn()} onMapClick={vi.fn()} />);
+
+  await waitFor(() => expect(ol.applyStyleMock).toHaveBeenCalledWith(
+    expect.anything(),
+    {
+      sources: {
+        streets: {
+          tiles: ["https://api.maptiler.com/tiles/v4/{z}/{x}/{y}.pbf?key=restricted-browser-key"],
+          minzoom: 0,
+          maxzoom: 14,
+        },
+      },
+    },
+  ));
+
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
+
+it("applies the dark style when the dark theme is active", async () => {
+  vi.stubEnv("VITE_MAP_TILE_URL", "");
+  vi.stubEnv("VITE_MAP_STYLE_URL", "https://api.example.com/light.json");
+  vi.stubEnv("VITE_MAP_STYLE_URL_DARK", "https://api.example.com/dark.json");
+  ol.maps.length = 0;
+  ol.applyStyleMock.mockClear();
+  ol.usePointsMock.mockReturnValue({ data: [], isFetching: false, isError: false });
+  document.documentElement.dataset.theme = "dark";
+
+  render(<MapWidget city={city} onSelect={vi.fn()} onMapClick={vi.fn()} />);
+
+  await waitFor(() => expect(ol.applyStyleMock).toHaveBeenCalledWith(expect.anything(), "https://api.example.com/dark.json"));
+
+  delete document.documentElement.dataset.theme;
+  vi.unstubAllEnvs();
+});
+
+it("switches the map style when the theme changes", async () => {
+  vi.stubEnv("VITE_MAP_TILE_URL", "");
+  vi.stubEnv("VITE_MAP_STYLE_URL", "https://api.example.com/light.json");
+  vi.stubEnv("VITE_MAP_STYLE_URL_DARK", "https://api.example.com/dark.json");
+  ol.maps.length = 0;
+  ol.applyStyleMock.mockClear();
+  ol.usePointsMock.mockReturnValue({ data: [], isFetching: false, isError: false });
+  delete document.documentElement.dataset.theme;
+
+  render(<MapWidget city={city} onSelect={vi.fn()} onMapClick={vi.fn()} />);
+
+  await waitFor(() => expect(ol.applyStyleMock).toHaveBeenCalledWith(expect.anything(), "https://api.example.com/light.json"));
+
+  document.documentElement.dataset.theme = "dark";
+
+  await waitFor(() => expect(ol.applyStyleMock).toHaveBeenCalledWith(expect.anything(), "https://api.example.com/dark.json"));
+
+  delete document.documentElement.dataset.theme;
+  vi.unstubAllEnvs();
+});
+
+it("does not apply an outdated style after switching themes", async () => {
+  vi.stubEnv("VITE_MAP_STYLE_URL", "https://api.example.com/light.json");
+  vi.stubEnv("VITE_MAP_STYLE_URL_DARK", "https://api.example.com/dark.json");
+  ol.maps.length = 0;
+  const pending = new Map<string, { group: any; resolve: () => void }>();
+  ol.applyStyleMock.mockImplementation((group: any, style: string) => new Promise<void>(resolve => {
+    pending.set(style, { group, resolve });
+  }));
+  ol.usePointsMock.mockReturnValue({ data: [], isFetching: false, isError: false });
+
+  render(<MapWidget city={city} onSelect={vi.fn()} onMapClick={vi.fn()} />);
+  await waitFor(() => expect(pending.has("https://api.example.com/light.json")).toBe(true));
+
+  document.documentElement.dataset.theme = "dark";
+  await waitFor(() => expect(pending.has("https://api.example.com/dark.json")).toBe(true));
+
+  const darkRequest = pending.get("https://api.example.com/dark.json")!;
+  darkRequest.resolve();
+  await waitFor(() => expect(ol.maps[0].layers[0]).toBe(darkRequest.group));
+
+  pending.get("https://api.example.com/light.json")!.resolve();
+  await Promise.resolve();
+  expect(ol.maps[0].layers[0]).toBe(darkRequest.group);
+
+  delete document.documentElement.dataset.theme;
+  vi.unstubAllEnvs();
+});
+
 it("does not select a marker missing from the current points data", async () => {
   ol.maps.length = 0;
   ol.features.length = 0;
@@ -248,5 +431,3 @@ it("does not select a marker missing from the current points data", async () => 
 
   expect(onSelect).not.toHaveBeenCalled();
 });
-
-

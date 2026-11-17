@@ -99,9 +99,34 @@ PWA настраивается через `vite-plugin-pwa`, manifest храни
 Пример переменных находится в `.env.example`:
 
 - `VITE_API_URL` — базовый URL API, по умолчанию `/api/v1`.
-- `VITE_MAP_TILE_URL` — необязательный URL шаблона картографических тайлов.
+- `VITE_MAP_TILE_URL` — необязательный URL шаблона растровых тайлов вида `https://.../{z}/{x}/{y}.png`.
+- `VITE_MAP_TILE_ATTRIBUTION` — необязательная строка атрибуции для пользовательского источника тайлов; укажите требуемую провайдером атрибуцию.
+- `VITE_MAP_STYLE_URL` — необязательный URL векторного стиля Mapbox/MapTiler (`style.json`); рендерится через `ol-mapbox-style` и имеет приоритет над `VITE_MAP_TILE_URL`. Если обе переменные пусты или стиль не загрузился, используется стандартный слой OpenStreetMap.
+- `VITE_MAP_STYLE_URL_DARK` — необязательный URL тёмного векторного стиля; применяется автоматически при активной тёмной теме интерфейса. Если не задан, в тёмной теме используется `VITE_MAP_STYLE_URL`.
+- `VITE_MAPTILER_API_KEY` — публичный ключ браузера, используемый локальными стилями MapTiler. Он виден в клиентском bundle и сетевых запросах: ограничьте его разрешёнными доменами и квотами; не используйте секретные ключи.
 
-Не помещайте секретные ключи в `VITE_*`: такие значения встраиваются в клиентский bundle и доступны пользователям.
+`VITE_MAP_STYLE_URL` и `VITE_MAP_STYLE_URL_DARK` могут указывать как на внешний `style.json` (MapTiler/Mapbox), так и на локальный файл в `app/frontend/public/` (например, `/styles/map-light.json`) — локальные файлы раздаются приложением и не требуют внешнего хостинга. В локальных стилях ключ заменяется на `VITE_MAPTILER_API_KEY` при загрузке.
+
+### Стили карты и архивация
+
+Тема карты генерируется локальным скриптом `tools/generate-map-light-theme.mjs` из любого `style.json`: скрипт десатурирует и приводит цвета к единой мягкой гамме (сохраняя оттенки) и возвращает дорогам и зданиям контраст. Поддерживаются два режима — светлый и тёмный (режим `dark`), построенные по одному «рецепту», поэтому темы стилистически едины.
+
+```
+node tools/generate-map-light-theme.mjs <url-style.json> <выходной.json> [dark]
+```
+
+Скрипт сохраняет ключи в ссылках на сервисы как плейсхолдеры; задайте публичный ключ локально в `app/frontend/.env.local` через `VITE_MAPTILER_API_KEY`.
+
+Текущие темы — локальные файлы:
+- светлая: `public/styles/map-light.json` (`VITE_MAP_STYLE_URL=/styles/map-light.json`)
+- тёмная: `public/styles/map-dark.json` (`VITE_MAP_STYLE_URL_DARK=/styles/map-dark.json`)
+
+Архив прежних тем (для быстрого возврата строкой в `.env`):
+
+```
+VITE_MAP_STYLE_URL=https://api.maptiler.com/maps/01a1e4c1-d311-74c5-bf73-db673973f426/style.json?key=<MAPTILER_KEY>
+VITE_MAP_STYLE_URL_DARK=https://api.maptiler.com/maps/streets-v2-dark/style.json?key=<MAPTILER_KEY>
+```
 
 ## Production build и cache
 
